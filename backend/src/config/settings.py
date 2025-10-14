@@ -21,7 +21,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'apps.users',
     'apps.core',
-    'apps.rooms'
+    'apps.rooms',
+    'apps.questions',
 ]
 
 MIDDLEWARE = [
