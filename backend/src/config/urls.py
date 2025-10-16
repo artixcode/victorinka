@@ -1,14 +1,33 @@
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, re_path
+from drf_yasg import openapi
+from drf_yasg.views import get_schema_view
+from rest_framework import permissions
 from apps.core import views as core_views
 from apps.users.views import RegisterView, LoginView, MeView, LogoutView
 from apps.rooms.views import MyRoomsListView, RoomCreateView, RoomDetailView, RoomJoinView, RoomLeaveView
 from apps.questions.views import MyQuestionsListCreateView, MyQuestionDetailView
 
+schema_view = get_schema_view(
+    openapi.Info(
+        title="Victorina API",
+        default_version="v1",
+        description="API документация",
+    ),
+    public=True,
+    permission_classes=(permissions.AllowAny,),
+    authentication_classes=[],
+)
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", core_views.home, name="home"),
     path("health/", core_views.health, name="health"),
+
+    #swagger
+    re_path(r"^swagger(?P<format>\.json|\.yaml)$", schema_view.without_ui(cache_timeout=0), name="schema-json"),
+    path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
+    path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
 
     # Auth API
     path("api/auth/register/", RegisterView.as_view()),

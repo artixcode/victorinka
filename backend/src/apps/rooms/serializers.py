@@ -9,6 +9,7 @@ class RoomSerializer(serializers.ModelSerializer):
     players_count = serializers.SerializerMethodField()
 
     class Meta:
+        ref_name = "RoomPatchSerializer"
         model = Room
         fields = ["id", "name", "host_id", "invite_code", "status", "created_at", "players_count"]
         read_only_fields = ["invite_code", "status", "created_at", "host_id", "players_count"]
