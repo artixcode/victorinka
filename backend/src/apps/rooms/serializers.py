@@ -16,14 +16,13 @@ class RoomSerializer(serializers.ModelSerializer):
     def get_players_count(self, obj):
         return obj.participants.count()
 
-    def create(self, validated_data):
-        request = self.context["request"]
-        room = Room.objects.create(host=request.user, **validated_data)
-        RoomParticipant.objects.create(room=room, user=request.user, role=RoomParticipant.Role.HOST)
-        return room
-
-
 class RoomCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Room
         fields = ["name"]
+
+class RoomPatchSerializer(RoomSerializer):
+    class Meta(RoomSerializer.Meta):
+        ref_name = "RoomPatchSerializer"  # важно для drf_yasg
+        read_only_fields = ["invite_code", "created_at", "host_id", "players_count"]
+        fields = ["id", "name", "status", "invite_code", "created_at", "host_id", "players_count"]
