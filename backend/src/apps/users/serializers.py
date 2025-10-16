@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model, authenticate
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
+from .models import ActiveSession
 
 User = get_user_model()
 
@@ -40,3 +41,20 @@ class MeSerializer(serializers.ModelSerializer):
         model = User
         fields = ("id", "email", "full_name", "is_email_verified")
         read_only_fields = fields
+
+class ActiveSessionOutSerializer(serializers.ModelSerializer):
+    device = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ActiveSession
+        fields = ("id", "refresh_jti", "ip", "user_agent", "device", "created_at", "last_seen_at")
+        read_only_fields = fields
+
+    def get_device(self, obj):
+        ua = (obj.user_agent or "").lower()
+        if "iphone" in ua or "ios" in ua: return "iOS"
+        if "android" in ua: return "Android"
+        if "mac os" in ua or "macintosh" in ua: return "macOS"
+        if "windows" in ua: return "Windows"
+        if "linux" in ua: return "Linux"
+        return "Unknown"

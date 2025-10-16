@@ -4,6 +4,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import RegisterSerializer, LoginSerializer, MeSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 
 class RegisterView(views.APIView):
     permission_classes = [permissions.AllowAny]
@@ -71,3 +72,13 @@ class LogoutView(views.APIView):
         except Exception:
             return Response({"detail": "Некорректный refresh токен"}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"detail": "Вы вышли из системы"}, status=status.HTTP_200_OK)
+
+class LogoutAllView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @swagger_auto_schema(responses={200: "Все сессии отозваны"})
+    def post(self, request):
+        tokens = OutstandingToken.objects.filter(user=request.user)
+        for t in tokens:
+            BlacklistedToken.objects.get_or_create(token=t)
+        return Response({"detail": "Вы вышли из всех устройств"}, status=status.HTTP_200_OK)
