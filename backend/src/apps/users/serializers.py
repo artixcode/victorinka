@@ -11,6 +11,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("id", "email", "password", "full_name")
+        read_only_fields = ("id",)
 
     def create(self, validated_data):
         password = validated_data.pop("password")
@@ -22,6 +23,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
+    access = serializers.CharField(read_only=True)
+    refresh = serializers.CharField(read_only=True)
 
     def validate(self, attrs):
         user = authenticate(email=attrs["email"], password=attrs["password"])
