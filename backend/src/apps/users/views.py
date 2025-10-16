@@ -47,7 +47,27 @@ class MeView(views.APIView):
 class LogoutView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=["refresh"],
+            properties={
+                "refresh": openapi.Schema(type=openapi.TYPE_STRING, example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+            },
+        ),
+        responses={
+            200: openapi.Response("OK"),
+            400: "Некорректный запрос",
+            401: "Неавторизован",
+        },
+    )
     def post(self, request):
-        if not request.data.get("refresh"):
-            return Response({"detail": "Refresh токен обязателен"}, status=400)
-        return Response({"detail": "Вы вышли из системы"})
+        refresh = request.data.get("refresh")
+        if not refresh:
+            return Response({"detail": "Refresh токен обязателен"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            token = RefreshToken(refresh)
+            token.blacklist()
+        except Exception:
+            return Response({"detail": "Некорректный refresh токен"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "Вы вышли из системы"}, status=status.HTTP_200_OK)
