@@ -4,7 +4,7 @@ from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
 from apps.core import views as core_views
-from apps.users.views import RegisterView, LoginView, MeView, LogoutView
+from apps.users.views import RegisterView, LoginView, MeView, LogoutView, LogoutAllView
 from apps.rooms.views import MyRoomsListView, RoomCreateView, RoomDetailView, RoomJoinView, RoomLeaveView
 from apps.questions.views import MyQuestionsListCreateView, MyQuestionDetailView
 
@@ -34,6 +34,7 @@ urlpatterns = [
     path("api/auth/login/", LoginView.as_view()),
     path("api/auth/me/", MeView.as_view()),
     path("api/auth/logout/", LogoutView.as_view()),
+    path("api/auth/logout_all/", LogoutAllView.as_view(), name="logout_all"),
 
     # Rooms
     path("api/rooms/mine/", MyRoomsListView.as_view()),
