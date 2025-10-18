@@ -39,8 +39,8 @@ class AnswerOptionInline(admin.TabularInline):
 
 @admin.register(Question)
 class QuestionAdmin(admin.ModelAdmin):
-    list_display = ("id", "short_text", "author", "difficulty", "created_at")
-    list_filter = ("difficulty",)
+    list_display = ("id", "short_text", "author", "difficulty", "points", "created_at")
+    list_filter = ("difficulty", "points")
     search_fields = ("text",)
     raw_id_fields = ("author",)
     inlines = [AnswerOptionInline]

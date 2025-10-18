@@ -16,10 +16,11 @@ class AnswerOptionInSerializer(serializers.Serializer):
 class QuestionSerializer(serializers.ModelSerializer):
     options = AnswerOptionInSerializer(many=True, write_only=True)
     options_readonly = serializers.SerializerMethodField(read_only=True)
+    points = serializers.IntegerField(min_value=1, max_value=100, required=False)
 
     class Meta:
         model = Question
-        fields = ["id", "text", "explanation", "difficulty", "options", "options_readonly", "created_at"]
+        fields = ["id", "text", "explanation", "difficulty", "points", "options", "options_readonly", "created_at"]
         read_only_fields = ["id", "created_at"]
 
     def get_options_readonly(self, obj):

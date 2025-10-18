@@ -98,6 +98,7 @@ class Question(models.Model):
     text = models.TextField()
     explanation = models.TextField(blank=True)
     difficulty = models.CharField(max_length=10, choices=Difficulty.choices, default=Difficulty.MEDIUM, db_index=True)
+    points = models.PositiveSmallIntegerField(default=1)
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
