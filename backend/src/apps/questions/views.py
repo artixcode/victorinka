@@ -19,19 +19,40 @@ class MyQuestionsListCreateView(generics.ListCreateAPIView):
         return Question.objects.filter(author=self.request.user).order_by("-created_at")
 
     @swagger_auto_schema(
-        request_body=QuestionSerializer,
-        examples={
-            "application/json": {
-                "title": "Столица Франции?",
-                "difficulty": 2,
-                "options": [
-                    {"text": "Париж", "is_correct": True, "order": 1},
-                    {"text": "Берлин", "is_correct": False, "order": 2},
-                    {"text": "Рим", "is_correct": False, "order": 3},
-                    {"text": "Мадрид", "is_correct": False, "order": 4},
-                ]
-            }
-        }
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=["text", "difficulty", "options"],
+            properties={
+                "text": openapi.Schema(type=openapi.TYPE_STRING, example="Столица Франции?"),
+                "explanation": openapi.Schema(type=openapi.TYPE_STRING, example="Подсказка/пояснение (опционально)"),
+                "difficulty": openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    enum=["easy", "medium", "hard"],
+                    example="easy",
+                ),
+                "points": openapi.Schema(type=openapi.TYPE_INTEGER, example=5),
+                "options": openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    minItems=4,
+                    maxItems=4,
+                    items=openapi.Items(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            "text": openapi.Schema(type=openapi.TYPE_STRING),
+                            "is_correct": openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                            "order": openapi.Schema(type=openapi.TYPE_INTEGER),
+                        },
+                        required=["text", "is_correct", "order"],
+                    ),
+                    example=[
+                        {"text": "Париж", "is_correct": True, "order": 1},
+                        {"text": "Берлин", "is_correct": False, "order": 2},
+                        {"text": "Рим", "is_correct": False, "order": 3},
+                        {"text": "Мадрид", "is_correct": False, "order": 4},
+                    ],
+                ),
+            },
+        )
     )
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
@@ -47,7 +68,8 @@ class MyQuestionDetailView(generics.RetrieveUpdateDestroyAPIView):
         examples={
             "application/json": {
                 "title": "Столица Германии?",
-                "difficulty": 3,
+                "difficulty": "medium",
+                "points": 5,
                 "options": [
                     {"text": "Берлин", "is_correct": True,  "order": 1},
                     {"text": "Гамбург", "is_correct": False, "order": 2},
