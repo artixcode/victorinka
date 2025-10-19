@@ -8,10 +8,12 @@ User = get_user_model()
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
     email = serializers.EmailField(validators=[UniqueValidator(queryset=User.objects.all())])
-
+    nickname = serializers.CharField(max_length = 40,
+    validators = [UniqueValidator(queryset=User.objects.all(), lookup="iexact")],
+    )
     class Meta:
         model = User
-        fields = ("id", "email", "password", "full_name")
+        fields = ("id", "email", "password", "nickname")
         read_only_fields = ("id",)
 
     def create(self, validated_data):
@@ -39,7 +41,7 @@ class LoginSerializer(serializers.Serializer):
 class MeSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ("id", "email", "full_name", "is_email_verified")
+        fields = ("id", "email", "nickname", "is_email_verified", "total_wins", "total_points")
         read_only_fields = fields
 
 class ActiveSessionOutSerializer(serializers.ModelSerializer):
@@ -58,3 +60,12 @@ class ActiveSessionOutSerializer(serializers.ModelSerializer):
         if "windows" in ua: return "Windows"
         if "linux" in ua: return "Linux"
         return "Unknown"
+
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    nickname = serializers.CharField(max_length = 40,
+    validators=[UniqueValidator(queryset=User.objects.all(), lookup="iexact")],
+    )
+
+    class Meta:
+        model = User
+        fields = ("nickname",)
