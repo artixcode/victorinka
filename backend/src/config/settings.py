@@ -4,11 +4,31 @@ from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-!d)e&0jxi&!@t0zx4yt44ko3*b=!!s6#ozdahx6@rrrhspkg9d'
+def env_bool(name: str, default: bool = False) -> bool:
+    val = str(os.getenv(name, str(int(default))))
+    return val.lower() in {"1", "true", "yes", "on"}
 
-DEBUG = True
+def env_list(name: str, default=None):
+    if default is None:
+        default = []
+    raw = os.getenv(name, "")
+    if not raw:
+        return default
+    if raw.strip() == "*":
+        return ["*"]
+    return [item.strip() for item in raw.split(",") if item.strip()]
 
-ALLOWED_HOSTS = []
+SECRET_KEY = os.getenv(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-!d)e&0jxi&!@t0zx4yt44ko3*b=!!s6#ozdahx6@rrrhspkg9d"
+)
+DEBUG = env_bool("DJANGO_DEBUG", default=False)
+ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1", "backend", "nginx"])
+
+CSRF_TRUSTED_ORIGINS = env_list(
+    "CSRF_TRUSTED_ORIGINS",
+    default=["http://localhost", "http://127.0.0.1", "http://nginx"]
+)
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -86,7 +106,10 @@ USE_I18N = True
 
 USE_TZ = True
 
-STATIC_URL = 'static/'
+STATIC_URL = "static/"
+MEDIA_URL = "media/"
+STATIC_ROOT = BASE_DIR / "static"
+MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
