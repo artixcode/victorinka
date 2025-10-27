@@ -35,6 +35,7 @@ urlpatterns = [
     path("api/auth/me/", MeView.as_view()),
     path("api/auth/logout/", LogoutView.as_view()),
     path("api/auth/logout_all/", LogoutAllView.as_view(), name="logout_all"),
+    path("api/health/", core_views.health),
 
     # Rooms
     path("api/rooms/mine/", MyRoomsListView.as_view()),
