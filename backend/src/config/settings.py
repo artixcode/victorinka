@@ -59,10 +59,21 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'config.urls'
 
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'frontend', 'build', 'static'),
+    os.path.join(BASE_DIR, 'frontend', 'public'),
+]
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [
+            os.path.join(BASE_DIR, 'frontend', 'build'),  # React build
+            os.path.join(BASE_DIR, 'templates'),  # Django templates
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
