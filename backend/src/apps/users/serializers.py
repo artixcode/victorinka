@@ -30,7 +30,7 @@ class LoginSerializer(serializers.Serializer):
     refresh = serializers.CharField(read_only=True)
 
     def validate(self, attrs):
-        user = authenticate(email=attrs["email"], password=attrs["password"])
+        user = authenticate(username=attrs["email"], password=attrs["password"])
         if not user:
             raise serializers.ValidationError("Неверный email или пароль")
         if not user.is_active:

@@ -1,15 +1,12 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8000'; // ← Без /api в конце!
+const API_BASE_URL = process.env.REACT_APP_API_BASE || '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 });
 
-// Интерцептор для токена
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token');
   if (token) {
@@ -18,7 +15,6 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Интерцептор для обновления токена
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -26,17 +22,16 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-
       try {
         const refreshToken = localStorage.getItem('refresh_token');
-        const response = await axios.post(`${API_BASE_URL}/api/auth/token/refresh/`, {
-          refresh: refreshToken
-        });
+        if (!refreshToken) throw new Error('No refresh token');
 
-        const { access } = response.data;
+        const { data } = await api.post('/auth/token/refresh/', { refresh: refreshToken });
+        const { access } = data;
+
         localStorage.setItem('access_token', access);
-
         originalRequest.headers.Authorization = `Bearer ${access}`;
+
         return api(originalRequest);
       } catch (refreshError) {
         localStorage.removeItem('access_token');

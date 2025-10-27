@@ -4,6 +4,17 @@ from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+STATICFILES_DIRS = []
+
+FRONTEND_BUILD_STATIC = BASE_DIR / "frontend" / "build" / "static"
+FRONTEND_PUBLIC = BASE_DIR / "frontend" / "public"
+
+if FRONTEND_BUILD_STATIC.exists():
+    STATICFILES_DIRS.append(str(FRONTEND_BUILD_STATIC))
+
+if FRONTEND_PUBLIC.exists():
+    STATICFILES_DIRS.append(str(FRONTEND_PUBLIC))
+
 def env_bool(name: str, default: bool = False) -> bool:
     val = str(os.getenv(name, str(int(default))))
     return val.lower() in {"1", "true", "yes", "on"}
