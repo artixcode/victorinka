@@ -1,0 +1,27 @@
+.header {
+  background: #001529;
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+
+.nav {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 1rem;
+}
+
+.navLink {
+  color: white;
+  text-decoration: none;
+  transition: 0.3s;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+}
+
+.navLink:hover {
+  background-color: black;
+}
