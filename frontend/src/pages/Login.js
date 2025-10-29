@@ -29,7 +29,7 @@ const Login = () => {
     setError('');
 
     try {
-      // Вызов твоего JWT login эндпоинта
+      // Вызов JWT login эндпоинта
       const response = await authAPI.login(formData.email, formData.password);
 
       // Сохраняем JWT токены
