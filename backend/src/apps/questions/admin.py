@@ -1,4 +1,3 @@
-from django import forms
 from django.forms.models import BaseInlineFormSet
 from django.core.exceptions import ValidationError
 from django.contrib import admin
@@ -47,3 +46,60 @@ class QuestionAdmin(admin.ModelAdmin):
 
     def short_text(self, obj):
         return (obj.text[:80] + "…") if len(obj.text) > 80 else obj.text
+
+
+@admin.register(Topic)
+class TopicAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "slug")
+    search_fields = ("name",)
+    prepopulated_fields = {"slug": ("name",)}
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "slug")
+    search_fields = ("name",)
+    prepopulated_fields = {"slug": ("name",)}
+
+
+class QuizQuestionInline(admin.TabularInline):
+    model = QuizQuestion
+    extra = 1
+    raw_id_fields = ("question",)
+    fields = ("question", "order")
+    ordering = ("order",)
+
+
+@admin.register(Quiz)
+class QuizAdmin(admin.ModelAdmin):
+    list_display = ("id", "title", "author", "status", "visibility", "created_at", "question_count")
+    list_filter = ("status", "visibility", "created_at")
+    search_fields = ("title", "description")
+    raw_id_fields = ("author",)
+    filter_horizontal = ("topics", "tags")
+    inlines = [QuizQuestionInline]
+
+    fieldsets = (
+        ("Основное", {
+            "fields": ("title", "description", "author")
+        }),
+        ("Настройки", {
+            "fields": ("status", "visibility")
+        }),
+        ("Категории", {
+            "fields": ("topics", "tags")
+        }),
+    )
+
+    def question_count(self, obj):
+        return obj.questions.count()
+    question_count.short_description = "Вопросов"
+
+
+@admin.register(AnswerOption)
+class AnswerOptionAdmin(admin.ModelAdmin):
+    list_display = ("id", "question", "text", "is_correct", "order")
+    list_filter = ("is_correct",)
+    search_fields = ("text", "question__text")
+    raw_id_fields = ("question",)
+
