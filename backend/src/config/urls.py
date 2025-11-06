@@ -6,7 +6,16 @@ from rest_framework import permissions
 from apps.core import views as core_views
 from apps.users.views import RegisterView, LoginView, MeView, LogoutView, LogoutAllView
 from apps.rooms.views import MyRoomsListView, RoomCreateView, RoomDetailView, RoomJoinView, RoomLeaveView
-from apps.questions.views import MyQuestionsListCreateView, MyQuestionDetailView
+from apps.questions.views import (
+    MyQuestionsListCreateView,
+    MyQuestionDetailView,
+    MyQuizzesListCreateView,
+    MyQuizDetailView,
+    PublicQuizzesListView,
+    PublicQuizDetailView,
+    TopicListView,
+    TagListView,
+)
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -43,7 +52,19 @@ urlpatterns = [
     path("api/rooms/<int:pk>/join/", RoomJoinView.as_view()),
     path("api/rooms/<int:pk>/leave/", RoomLeaveView.as_view()),
 
-    #questions
-    path("api/questions/", MyQuestionsListCreateView.as_view()),
-    path("api/questions/<int:pk>/", MyQuestionDetailView.as_view()),
+    # Topics & Tags
+    path("api/topics/", TopicListView.as_view(), name="topics-list"),
+    path("api/tags/", TagListView.as_view(), name="tags-list"),
+
+    # Questions
+    path("api/questions/", MyQuestionsListCreateView.as_view(), name="my-questions"),
+    path("api/questions/<int:pk>/", MyQuestionDetailView.as_view(), name="my-question-detail"),
+
+    # Quizzes (Мои)
+    path("api/quizzes/mine/", MyQuizzesListCreateView.as_view(), name="my-quizzes"),
+    path("api/quizzes/mine/<int:pk>/", MyQuizDetailView.as_view(), name="my-quiz-detail"),
+
+    # Quizzes (Публичные - каталог)
+    path("api/quizzes/", PublicQuizzesListView.as_view(), name="public-quizzes"),
+    path("api/quizzes/<int:pk>/", PublicQuizDetailView.as_view(), name="public-quiz-detail"),
 ]
