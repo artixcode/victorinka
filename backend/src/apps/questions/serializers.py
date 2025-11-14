@@ -30,11 +30,12 @@ class QuestionSerializer(serializers.ModelSerializer):
     options = AnswerOptionInSerializer(many=True, write_only=True)
     options_readonly = serializers.SerializerMethodField(read_only=True)
     points = serializers.IntegerField(min_value=1, max_value=100, required=False)
+    author_name = serializers.CharField(source="author.nickname", read_only=True)
 
     class Meta:
         model = Question
-        fields = ["id", "text", "explanation", "difficulty", "points", "options", "options_readonly", "created_at"]
-        read_only_fields = ["id", "created_at"]
+        fields = ["id", "author", "author_name", "text", "explanation", "difficulty", "points", "options", "options_readonly", "created_at"]
+        read_only_fields = ["id", "author", "created_at"]
 
     def get_options_readonly(self, obj):
         opts = obj.options.order_by("order", "id").values("id", "text", "is_correct", "order")
@@ -134,10 +135,12 @@ class QuizDetailSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "author", "created_at", "updated_at"]
 
     def get_questions_list(self, obj):
-        quiz_questions = QuizQuestion.objects.filter(quiz=obj).select_related("question").order_by("order")
+        quiz_questions = QuizQuestion.objects.filter(quiz=obj).select_related("question", "question__author").order_by("order")
         return [
             {
                 "id": qq.question.id,
+                "author": qq.question.author_id,
+                "author_name": qq.question.author.nickname,
                 "text": qq.question.text,
                 "difficulty": qq.question.difficulty,
                 "points": qq.question.points,
