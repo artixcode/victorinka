@@ -15,6 +15,7 @@ from apps.questions.views import (
     PublicQuizDetailView,
     TopicListView,
     TagListView,
+    HomePageView,
 )
 
 schema_view = get_schema_view(
@@ -55,6 +56,9 @@ urlpatterns = [
     # Topics & Tags
     path("api/topics/", TopicListView.as_view(), name="topics-list"),
     path("api/tags/", TagListView.as_view(), name="tags-list"),
+
+    # Home page (популярные викторины)
+    path("api/home/", HomePageView.as_view(), name="home-page"),
 
     # Questions
     path("api/questions/", MyQuestionsListCreateView.as_view(), name="my-questions"),

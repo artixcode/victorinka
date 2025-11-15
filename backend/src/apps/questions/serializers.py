@@ -97,9 +97,9 @@ class QuizListSerializer(serializers.ModelSerializer):
         fields = [
             "id", "title", "description", "author", "author_name",
             "status", "visibility", "topics", "tags",
-            "question_count", "created_at", "updated_at"
+            "question_count", "views_count", "created_at", "updated_at"
         ]
-        read_only_fields = ["id", "author", "created_at", "updated_at"]
+        read_only_fields = ["id", "author", "views_count", "created_at", "updated_at"]
 
     def get_question_count(self, obj):
         return obj.questions.count()
@@ -129,10 +129,10 @@ class QuizDetailSerializer(serializers.ModelSerializer):
             "id", "title", "description", "author", "author_name",
             "status", "visibility",
             "topics", "tags", "topic_ids", "tag_ids",
-            "questions_list", "question_orders",
+            "questions_list", "question_orders", "views_count",
             "created_at", "updated_at"
         ]
-        read_only_fields = ["id", "author", "created_at", "updated_at"]
+        read_only_fields = ["id", "author", "views_count", "created_at", "updated_at"]
 
     def get_questions_list(self, obj):
         quiz_questions = QuizQuestion.objects.filter(quiz=obj).select_related("question", "question__author").order_by("order")

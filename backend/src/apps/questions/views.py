@@ -1,4 +1,5 @@
 from rest_framework import generics, permissions
+from rest_framework.response import Response
 from .models import Question, Quiz, Topic, Tag
 from .serializers import (
     QuestionSerializer,
@@ -165,7 +166,7 @@ class PublicQuizzesListView(generics.ListAPIView):
         queryset = Quiz.objects.filter(
             status=Quiz.Status.PUBLISHED,
             visibility=Quiz.Visibility.PUBLIC
-        ).order_by("-created_at")
+        ).select_related("author").prefetch_related("topics", "tags")
 
         # Фильтрация по темам
         topics = self.request.query_params.get("topics")
@@ -179,10 +180,26 @@ class PublicQuizzesListView(generics.ListAPIView):
             tag_ids = [int(t) for t in tags.split(",") if t.isdigit()]
             queryset = queryset.filter(tags__id__in=tag_ids).distinct()
 
+        # Фильтрация по автору
+        author = self.request.query_params.get("author")
+        if author:
+            if author.isdigit():
+                queryset = queryset.filter(author_id=int(author))
+            else:
+                queryset = queryset.filter(author__nickname__icontains=author)
+
         # Поиск по названию
         search = self.request.query_params.get("search")
         if search:
             queryset = queryset.filter(title__icontains=search)
+
+        # Сортировка
+        ordering = self.request.query_params.get("ordering", "-created_at")
+        allowed_orderings = ["created_at", "-created_at", "views_count", "-views_count", "title", "-title"]
+        if ordering in allowed_orderings:
+            queryset = queryset.order_by(ordering)
+        else:
+            queryset = queryset.order_by("-created_at")
 
         return queryset
 
@@ -190,7 +207,17 @@ class PublicQuizzesListView(generics.ListAPIView):
         manual_parameters=[
             openapi.Parameter("topics", openapi.IN_QUERY, description="ID тем через запятую (например: 1,2,3)", type=openapi.TYPE_STRING),
             openapi.Parameter("tags", openapi.IN_QUERY, description="ID тегов через запятую (например: 1,2,3)", type=openapi.TYPE_STRING),
+            openapi.Parameter("author", openapi.IN_QUERY, description="ID автора или имя автора для фильтрации", type=openapi.TYPE_STRING),
             openapi.Parameter("search", openapi.IN_QUERY, description="Поиск по названию", type=openapi.TYPE_STRING),
+            openapi.Parameter(
+                "ordering",
+                openapi.IN_QUERY,
+                description="Сортировка: created_at, -created_at, views_count, -views_count, title, -title (по умолчанию: -created_at)",
+                type=openapi.TYPE_STRING,
+                enum=["created_at", "-created_at", "views_count", "-views_count", "title", "-title"]
+            ),
+            openapi.Parameter("page", openapi.IN_QUERY, description="Номер страницы", type=openapi.TYPE_INTEGER),
+            openapi.Parameter("page_size", openapi.IN_QUERY, description="Количество элементов на странице (по умолчанию: 20)", type=openapi.TYPE_INTEGER),
         ]
     )
     def get(self, request, *args, **kwargs):
@@ -207,3 +234,28 @@ class PublicQuizDetailView(generics.RetrieveAPIView):
             status=Quiz.Status.PUBLISHED,
             visibility=Quiz.Visibility.PUBLIC
         )
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.increment_views()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
+
+class HomePageView(generics.ListAPIView):
+    serializer_class = QuizListSerializer
+    permission_classes = [permissions.AllowAny]
+    pagination_class = None
+
+    def get_queryset(self):
+        return Quiz.objects.filter(
+            status=Quiz.Status.PUBLISHED,
+            visibility=Quiz.Visibility.PUBLIC
+        ).select_related("author").prefetch_related("topics", "tags").order_by("-views_count", "-created_at")[:10]
+
+    @swagger_auto_schema(
+        operation_description="Получить подборку популярных викторин для главной страницы (топ-10 по просмотрам)"
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
