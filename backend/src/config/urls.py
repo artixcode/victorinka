@@ -4,7 +4,11 @@ from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
 from apps.core import views as core_views
-from apps.users.views import RegisterView, LoginView, MeView, LogoutView, LogoutAllView
+from apps.users.views import (
+    RegisterView, LoginView, MeView, LogoutView, LogoutAllView,
+    MyBookmarksListView, BookmarkCreateView, BookmarkDetailView,
+    MyGameHistoryView, MyActiveRoomsView, MyStatsView
+)
 from apps.rooms.views import MyRoomsListView, RoomCreateView, RoomDetailView, RoomJoinView, RoomLeaveView
 from apps.questions.views import (
     MyQuestionsListCreateView,
@@ -72,6 +76,21 @@ urlpatterns = [
     # Quizzes (Публичные - каталог)
     path("api/quizzes/", PublicQuizzesListView.as_view(), name="public-quizzes"),
     path("api/quizzes/<int:pk>/", PublicQuizDetailView.as_view(), name="public-quiz-detail"),
+
+    # Личный кабинет
+    # Закладки
+    path("api/cabinet/bookmarks/", MyBookmarksListView.as_view(), name="my-bookmarks"),
+    path("api/cabinet/bookmarks/add/", BookmarkCreateView.as_view(), name="bookmark-add"),
+    path("api/cabinet/bookmarks/<int:pk>/", BookmarkDetailView.as_view(), name="bookmark-detail"),
+
+    # История игр
+    path("api/cabinet/history/", MyGameHistoryView.as_view(), name="my-game-history"),
+
+    # Активные комнаты
+    path("api/cabinet/active-rooms/", MyActiveRoomsView.as_view(), name="my-active-rooms"),
+
+    # Статистика
+    path("api/cabinet/stats/", MyStatsView.as_view(), name="my-stats"),
 
     # Game API
     # Запуск игры в комнате
