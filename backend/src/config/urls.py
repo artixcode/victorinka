@@ -17,6 +17,7 @@ from apps.questions.views import (
     TagListView,
     HomePageView,
 )
+from apps.game import views as game_views
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -71,4 +72,22 @@ urlpatterns = [
     # Quizzes (Публичные - каталог)
     path("api/quizzes/", PublicQuizzesListView.as_view(), name="public-quizzes"),
     path("api/quizzes/<int:pk>/", PublicQuizDetailView.as_view(), name="public-quiz-detail"),
+
+    # Game API
+    # Запуск игры в комнате
+    path("api/game/rooms/<int:room_id>/start/", game_views.start_game, name="game-start"),
+
+    # Управление игровой сессией
+    path("api/game/sessions/<int:session_id>/", game_views.get_session, name="game-session-detail"),
+    path("api/game/sessions/<int:session_id>/start/", game_views.start_session, name="game-session-start"),
+    path("api/game/sessions/<int:session_id>/pause/", game_views.pause_session, name="game-session-pause"),
+    path("api/game/sessions/<int:session_id>/resume/", game_views.resume_session, name="game-session-resume"),
+
+    # Игровой процесс
+    path("api/game/sessions/<int:session_id>/current-question/", game_views.get_current_question, name="game-current-question"),
+    path("api/game/sessions/<int:session_id>/answer/", game_views.submit_answer, name="game-submit-answer"),
+    path("api/game/sessions/<int:session_id>/results/", game_views.get_results, name="game-results"),
+
+    # История игр
+    path("api/game/sessions/my/", game_views.GameSessionListView.as_view(), name="my-game-sessions"),
 ]
