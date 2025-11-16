@@ -1,10 +1,16 @@
-from rest_framework import views, permissions, status
+from rest_framework import views, permissions, status, generics, filters
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import RegisterSerializer, LoginSerializer, MeSerializer, ProfileUpdateSerializer
+from .serializers import (
+    RegisterSerializer, LoginSerializer, MeSerializer, ProfileUpdateSerializer,
+    QuizBookmarkSerializer, QuizBookmarkCreateSerializer,
+    GameHistorySerializer, UserStatsSerializer
+)
+from .models import QuizBookmark, GameHistory
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
+from django.shortcuts import get_object_or_404
 
 
 class RegisterView(views.APIView):
@@ -99,3 +105,150 @@ class LogoutAllView(views.APIView):
         for t in tokens:
             BlacklistedToken.objects.get_or_create(token=t)
         return Response({"detail": "Вы вышли из всех устройств"}, status=status.HTTP_200_OK)
+
+
+class MyBookmarksListView(generics.ListAPIView):
+    """Список закладок пользователя"""
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = QuizBookmarkSerializer
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['added_at', 'quiz__title', 'quiz__views_count']
+    ordering = ['-added_at']
+
+    def get_queryset(self):
+        return QuizBookmark.objects.filter(user=self.request.user).select_related('quiz', 'quiz__author')
+
+
+class BookmarkCreateView(views.APIView):
+    """Добавить викторину в закладки"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    @swagger_auto_schema(
+        request_body=QuizBookmarkCreateSerializer,
+        responses={
+            201: QuizBookmarkSerializer,
+            400: "Викторина уже в закладках или некорректные данные"
+        }
+    )
+    def post(self, request):
+        serializer = QuizBookmarkCreateSerializer(data=request.data, context={'request': request})
+
+        if serializer.is_valid():
+            quiz_id = serializer.validated_data['quiz'].id
+            if QuizBookmark.objects.filter(user=request.user, quiz_id=quiz_id).exists():
+                return Response(
+                    {"error": "Эта викторина уже в ваших закладках"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            bookmark = serializer.save()
+            return Response(
+                QuizBookmarkSerializer(bookmark).data,
+                status=status.HTTP_201_CREATED
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class BookmarkDetailView(views.APIView):
+    """Получить, обновить или удалить закладку"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self, pk):
+        return get_object_or_404(QuizBookmark, pk=pk, user=self.request.user)
+
+    @swagger_auto_schema(responses={200: QuizBookmarkSerializer})
+    def get(self, request, pk):
+        bookmark = self.get_object(pk)
+        return Response(QuizBookmarkSerializer(bookmark).data)
+
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={'notes': openapi.Schema(type=openapi.TYPE_STRING)}
+        ),
+        responses={200: QuizBookmarkSerializer}
+    )
+    def patch(self, request, pk):
+        bookmark = self.get_object(pk)
+        notes = request.data.get('notes', '')
+        bookmark.notes = notes
+        bookmark.save()
+        return Response(QuizBookmarkSerializer(bookmark).data)
+
+    @swagger_auto_schema(responses={204: "Закладка удалена"})
+    def delete(self, request, pk):
+        bookmark = self.get_object(pk)
+        bookmark.delete()
+        return Response({"detail": "Закладка удалена"}, status=status.HTTP_204_NO_CONTENT)
+
+
+class MyGameHistoryView(generics.ListAPIView):
+    """История игр пользователя"""
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = GameHistorySerializer
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['played_at', 'final_points', 'accuracy']
+    ordering = ['-played_at']
+
+    def get_queryset(self):
+        return GameHistory.objects.filter(user=self.request.user).select_related(
+            'quiz', 'room', 'session'
+        )
+
+
+class MyActiveRoomsView(views.APIView):
+    """Активные комнаты пользователя"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    @swagger_auto_schema(
+        responses={200: openapi.Response(
+            'Список активных комнат',
+            schema=openapi.Schema(
+                type=openapi.TYPE_ARRAY,
+                items=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'room_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'room_name': openapi.Schema(type=openapi.TYPE_STRING),
+                        'status': openapi.Schema(type=openapi.TYPE_STRING),
+                        'is_host': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'joined_at': openapi.Schema(type=openapi.TYPE_STRING, format='date-time'),
+                    }
+                )
+            )
+        )}
+    )
+    def get(self, request):
+        from apps.rooms.models import Room, RoomParticipant
+
+        participations = RoomParticipant.objects.filter(
+            user=request.user,
+            room__status__in=[Room.Status.OPEN, Room.Status.IN_PROGRESS]
+        ).select_related('room').order_by('-joined_at')
+
+        active_rooms = []
+        for participation in participations:
+            room = participation.room
+            active_rooms.append({
+                'room_id': room.id,
+                'room_name': room.name,
+                'invite_code': room.invite_code,
+                'status': room.status,
+                'is_host': participation.role == RoomParticipant.Role.HOST,
+                'joined_at': participation.joined_at,
+                'participants_count': room.participants.count(),
+            })
+
+        return Response(active_rooms)
+
+
+class MyStatsView(views.APIView):
+    """Статистика пользователя"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    @swagger_auto_schema(responses={200: UserStatsSerializer})
+    def get(self, request):
+        serializer = UserStatsSerializer(request.user)
+        return Response(serializer.data)
+

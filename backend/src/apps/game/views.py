@@ -282,6 +282,22 @@ def submit_answer(request, session_id):
                 stats.rank = rank
                 stats.save(update_fields=['rank'])
 
+            # Создаем записи в историю игр для всех участников
+            from apps.users.models import GameHistory
+            total_questions = session.quiz.questions.count()
+
+            for stats in session.player_stats.all():
+                GameHistory.objects.create(
+                    user=stats.user,
+                    session=session,
+                    room=session.room,
+                    quiz=session.quiz,
+                    final_points=stats.total_points,
+                    correct_answers=stats.correct_answers,
+                    total_questions=total_questions,
+                    final_rank=stats.rank
+                )
+
     response_data = {
         'answer': PlayerAnswerSerializer(answer).data,
         'is_correct': answer.is_correct,
