@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'apps.core',
     'apps.rooms',
     'apps.questions',
+    'apps.game',
 ]
 
 MIDDLEWARE = [
