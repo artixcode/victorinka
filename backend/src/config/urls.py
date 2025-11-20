@@ -10,6 +10,9 @@ from apps.users.views import (
     MyGameHistoryView, MyActiveRoomsView, MyStatsView,
     PasswordResetRequestView, PasswordResetConfirmView, PasswordResetTokenListView
 )
+from apps.users.leaderboard_views import (
+    GlobalLeaderboardView, QuizLeaderboardView, RoomLeaderboardView, UserStatsDetailView
+)
 from apps.rooms.views import MyRoomsListView, RoomCreateView, RoomDetailView, RoomJoinView, RoomLeaveView
 from apps.questions.views import (
     MyQuestionsListCreateView,
@@ -115,4 +118,10 @@ urlpatterns = [
 
     # История игр
     path("api/game/sessions/my/", game_views.GameSessionListView.as_view(), name="my-game-sessions"),
+
+    # Leaderboard (Таблица лидеров)
+    path("api/leaderboard/global/", GlobalLeaderboardView.as_view(), name="global-leaderboard"),
+    path("api/leaderboard/quiz/<int:quiz_id>/", QuizLeaderboardView.as_view(), name="quiz-leaderboard"),
+    path("api/leaderboard/room/<int:room_id>/", RoomLeaderboardView.as_view(), name="room-leaderboard"),
+    path("api/leaderboard/user/<int:user_id>/", UserStatsDetailView.as_view(), name="user-stats-detail"),
 ]
