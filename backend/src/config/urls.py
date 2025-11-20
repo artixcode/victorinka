@@ -7,7 +7,8 @@ from apps.core import views as core_views
 from apps.users.views import (
     RegisterView, LoginView, MeView, LogoutView, LogoutAllView,
     MyBookmarksListView, BookmarkCreateView, BookmarkDetailView,
-    MyGameHistoryView, MyActiveRoomsView, MyStatsView
+    MyGameHistoryView, MyActiveRoomsView, MyStatsView,
+    PasswordResetRequestView, PasswordResetConfirmView, PasswordResetTokenListView
 )
 from apps.rooms.views import MyRoomsListView, RoomCreateView, RoomDetailView, RoomJoinView, RoomLeaveView
 from apps.questions.views import (
@@ -50,6 +51,11 @@ urlpatterns = [
     path("api/auth/me/", MeView.as_view()),
     path("api/auth/logout/", LogoutView.as_view()),
     path("api/auth/logout_all/", LogoutAllView.as_view(), name="logout_all"),
+
+    # Password Reset (восстановление пароля)
+    path("api/auth/password-reset/request/", PasswordResetRequestView.as_view(), name="password-reset-request"),
+    path("api/auth/password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
+    path("api/auth/password-reset/tokens/", PasswordResetTokenListView.as_view(), name="password-reset-tokens"),
 
     # Rooms
     path("api/rooms/mine/", MyRoomsListView.as_view()),

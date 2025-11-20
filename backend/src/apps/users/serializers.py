@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model, authenticate
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
-from .models import ActiveSession, QuizBookmark, GameHistory
+from .models import ActiveSession, QuizBookmark, GameHistory, PasswordResetToken
 
 User = get_user_model()
 
@@ -172,3 +172,76 @@ class UserStatsSerializer(serializers.ModelSerializer):
             participants__user=obj,
             status__in=[Room.Status.OPEN, Room.Status.IN_PROGRESS]
         ).count()
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """Сериализатор для запроса восстановления пароля"""
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        try:
+            user = User.objects.get(email=value)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("Пользователь с таким email не найден")
+        return value
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """Сериализатор для подтверждения восстановления пароля с токеном"""
+    token = serializers.CharField(max_length=64)
+    new_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate_token(self, value):
+        try:
+            reset_token = PasswordResetToken.objects.get(token=value)
+        except PasswordResetToken.DoesNotExist:
+            raise serializers.ValidationError("Токен не найден")
+
+        if not reset_token.is_valid():
+            if reset_token.is_used:
+                raise serializers.ValidationError("Токен уже использован")
+            if reset_token.is_expired():
+                raise serializers.ValidationError("Токен истек. Запросите новый токен восстановления")
+
+        return value
+
+    def validate_new_password(self, value):
+        if len(value) < 8:
+            raise serializers.ValidationError("Пароль должен содержать минимум 8 символов")
+        return value
+
+
+class PasswordResetTokenSerializer(serializers.ModelSerializer):
+    """Сериализатор для отображения токена восстановления (для админов)"""
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+    is_valid_token = serializers.SerializerMethodField()
+    time_left = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PasswordResetToken
+        fields = [
+            'id',
+            'user',
+            'user_email',
+            'token',
+            'created_at',
+            'expires_at',
+            'is_used',
+            'used_at',
+            'is_valid_token',
+            'time_left',
+        ]
+        read_only_fields = fields
+
+    def get_is_valid_token(self, obj):
+        return obj.is_valid()
+
+    def get_time_left(self, obj):
+        """Возвращает оставшееся время в часах"""
+        if obj.is_used or obj.is_expired():
+            return 0
+        from django.utils import timezone
+        delta = obj.expires_at - timezone.now()
+        hours = delta.total_seconds() / 3600
+        return round(hours, 1)
+

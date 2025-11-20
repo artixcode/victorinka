@@ -4,13 +4,17 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import (
     RegisterSerializer, LoginSerializer, MeSerializer, ProfileUpdateSerializer,
     QuizBookmarkSerializer, QuizBookmarkCreateSerializer,
-    GameHistorySerializer, UserStatsSerializer
+    GameHistorySerializer, UserStatsSerializer,
+    PasswordResetRequestSerializer, PasswordResetConfirmSerializer, PasswordResetTokenSerializer
 )
-from .models import QuizBookmark, GameHistory
+from .models import QuizBookmark, GameHistory, PasswordResetToken
+from django.contrib.auth import get_user_model
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 from django.shortcuts import get_object_or_404
+
+User = get_user_model()
 
 
 class RegisterView(views.APIView):
@@ -251,4 +255,101 @@ class MyStatsView(views.APIView):
     def get(self, request):
         serializer = UserStatsSerializer(request.user)
         return Response(serializer.data)
+
+
+class PasswordResetRequestView(views.APIView):
+    """Запрос на восстановление пароля."""
+    permission_classes = [permissions.AllowAny]
+
+    @swagger_auto_schema(
+        request_body=PasswordResetRequestSerializer,
+        responses={
+            200: openapi.Response(
+                'Токен создан',
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'detail': openapi.Schema(type=openapi.TYPE_STRING),
+                        'message': openapi.Schema(type=openapi.TYPE_STRING),
+                    }
+                )
+            ),
+            400: "Email не найден"
+        },
+        examples={
+            "application/json": {"email": "user@example.com"}
+        }
+    )
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data['email']
+        user = User.objects.get(email=email)
+
+        # Создаем токен восстановления
+        reset_token = PasswordResetToken.objects.create(user=user)
+
+        return Response({
+            'detail': 'Запрос на восстановление пароля создан',
+            'message': f'Токен восстановления создан для {email}. '
+                      'Администратор может найти токен в базе данных или админ-панели '
+                      'и передать его вам любым удобным способом.'
+        }, status=status.HTTP_200_OK)
+
+
+class PasswordResetConfirmView(views.APIView):
+    """Подтверждение восстановления пароля с токеном."""
+    permission_classes = [permissions.AllowAny]
+
+    @swagger_auto_schema(
+        request_body=PasswordResetConfirmSerializer,
+        responses={
+            200: openapi.Response('Пароль успешно изменен'),
+            400: "Некорректные данные или токен"
+        },
+        examples={
+            "application/json": {
+                "token": "abc123xyz789def456ghi012jkl345mn",
+                "new_password": "NewSecurePassword123"
+            }
+        }
+    )
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        token_value = serializer.validated_data['token']
+        new_password = serializer.validated_data['new_password']
+
+        # Получаем токен и пользователя
+        reset_token = PasswordResetToken.objects.get(token=token_value)
+        user = reset_token.user
+
+        # Меняем пароль
+        user.set_password(new_password)
+        user.save()
+
+        # Помечаем токен как использованный
+        ip_address = request.META.get('REMOTE_ADDR')
+        reset_token.mark_as_used(ip_address=ip_address)
+
+        return Response({
+            'detail': 'Пароль успешно изменен',
+            'message': 'Теперь вы можете войти с новым паролем'
+        }, status=status.HTTP_200_OK)
+
+
+class PasswordResetTokenListView(generics.ListAPIView):
+    """Список токенов восстановления (только для администраторов)."""
+    permission_classes = [permissions.IsAdminUser]
+    serializer_class = PasswordResetTokenSerializer
+    queryset = PasswordResetToken.objects.all().select_related('user').order_by('-created_at')
+
+    @swagger_auto_schema(
+        responses={200: PasswordResetTokenSerializer(many=True)}
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
 
