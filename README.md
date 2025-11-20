@@ -16,7 +16,7 @@
 
 1. **Клонируйте репозиторий:**
    ```bash
-   git clone https://github.com/your-username/victorinka.git
+   git clone https://github.com/artixcode/victorinka.git
    cd victorinka1
    ```
 
