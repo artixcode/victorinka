@@ -222,6 +222,23 @@ class PlayerAnswer(models.Model):
         self.points_earned = score.value
         return self.points_earned
 
+    def publish_answered_event(self):
+        from apps.game.domain.events import QuestionAnsweredEvent
+        from apps.game.infrastructure.event_bus import event_bus
+
+        event = QuestionAnsweredEvent(
+            session_id=self.round.session_id,
+            round_id=self.round_id,
+            user_id=self.user_id,
+            answer_id=self.id,
+            is_correct=self.is_correct,
+            points_earned=self.points_earned,
+            time_taken=self.time_taken,
+            is_first_answer=(self.user_id == self.round.first_answer_user_id)
+        )
+
+        event_bus.publish(event)
+
 
 class PlayerGameStats(models.Model):
 
