@@ -245,3 +245,55 @@ class PasswordResetTokenSerializer(serializers.ModelSerializer):
         hours = delta.total_seconds() / 3600
         return round(hours, 1)
 
+
+class UserLeaderboardSerializer(serializers.ModelSerializer):
+    """Сериализатор для отображения пользователя в таблице лидеров"""
+
+    rank = serializers.SerializerMethodField()
+    total_games = serializers.SerializerMethodField()
+    avg_accuracy = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            'id',
+            'nickname',
+            'total_points',
+            'total_wins',
+            'total_games',
+            'avg_accuracy',
+            'rank',
+        ]
+        read_only_fields = fields
+
+    def get_rank(self, obj):
+        """Ранг вычисляется по количеству пользователей с большими очками"""
+        return User.objects.filter(
+            is_active=True,
+            total_points__gt=obj.total_points
+        ).count() + 1
+
+    def get_total_games(self, obj):
+        """Количество сыгранных игр"""
+        return obj.game_history.count()
+
+    def get_avg_accuracy(self, obj):
+        """Средняя точность ответов (в процентах)"""
+        from django.db.models import Avg, F
+
+        games = obj.game_history.filter(total_questions__gt=0)
+        if not games.exists():
+            return 0
+
+        # Вычисляем среднюю точность
+        avg_data = games.aggregate(
+            avg_correct=Avg('correct_answers'),
+            avg_total=Avg('total_questions')
+        )
+
+        if avg_data['avg_total'] and avg_data['avg_total'] > 0:
+            accuracy = (avg_data['avg_correct'] / avg_data['avg_total']) * 100
+            return round(accuracy, 1)
+        return 0
+
+
