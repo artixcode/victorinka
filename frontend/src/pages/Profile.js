@@ -1,121 +1,64 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import { authAPI } from '../services/authAPI';
+import ProfileSidebar from '../components/ProfileSidebar';
+import ProfileInfo from '../components/ProfileInfo';
+import ProfileHistory from '../components/ProfileHistory';
+import ProfileBookmarks from '../components/ProfileBookmarks';
 import styles from '../styles/Profile.module.css';
 
 const Profile = () => {
-  const [user, setUser] = useState(null);
-  const [formData, setFormData] = useState({
-    nickname: '',
-    email: ''
-  });
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
+  const [activeSection, setActiveSection] = useState('info');
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (!userData) {
-      navigate('/login');
-      return;
+    const path = location.pathname;
+    if (path.includes('/history')) {
+      setActiveSection('history');
+    } else if (path.includes('/bookmarks')) {
+      setActiveSection('bookmarks');
+    } else {
+      setActiveSection('info');
     }
+  }, [location.pathname]);
 
-    const userObj = JSON.parse(userData);
-    setUser(userObj);
-    setFormData({
-      nickname: userObj.nickname || '',
-      email: userObj.email || ''
-    });
-  }, [navigate]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prevState => ({
-      ...prevState,
-      [name]: value
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage('');
-
-    try {
-      const response = await authAPI.updateProfile(formData);
-      const updatedUser = response.data;
-
-      // Обновляем данные в localStorage
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      setUser(updatedUser);
-
-      setMessage('Профиль успешно обновлен!');
-    } catch (error) {
-      console.error('Ошибка обновления профиля:', error);
-      setMessage('Ошибка при обновлении профиля');
-    } finally {
-      setLoading(false);
+  const handleSectionChange = (section) => {
+    setActiveSection(section);
+    if (section === 'info') {
+      navigate('/profile');
+    } else {
+      navigate(`/profile/${section}`);
     }
   };
 
-  if (!user) {
-    return <div>Загрузка...</div>;
-  }
+  const renderContent = () => {
+    switch (activeSection) {
+      case 'history':
+        return <ProfileHistory />;
+      case 'bookmarks':
+        return <ProfileBookmarks />;
+      default:
+        return <ProfileInfo />;
+    }
+  };
 
   return (
     <div className={styles.pageContainer}>
       <Header />
       <div className={styles.profilePage}>
         <div className={styles.profileContainer}>
-          <h1 className={styles.title}>Редактирование профиля</h1>
+          <div className={styles.profileLayout}>
+            <ProfileSidebar
+              activeSection={activeSection}
+              onSectionChange={handleSectionChange}
+            />
 
-          {message && (
-            <div className={message.includes('Ошибка') ? styles.error : styles.success}>
-              {message}
+            <div className={styles.profileContent}>
+              {renderContent()}
             </div>
-          )}
-
-          <form onSubmit={handleSubmit} className={styles.profileForm}>
-            <div className={styles.formGroup}>
-              <label htmlFor="nickname" className={styles.label}>Никнейм</label>
-              <input
-                type="text"
-                id="nickname"
-                name="nickname"
-                value={formData.nickname}
-                onChange={handleChange}
-                className={styles.input}
-                placeholder="Введите ваш никнейм"
-                required
-                disabled={loading}
-              />
-            </div>
-
-            <div className={styles.formGroup}>
-              <label htmlFor="email" className={styles.label}>Email</label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className={styles.input}
-                placeholder="Введите ваш email"
-                required
-                disabled={loading}
-              />
-            </div>
-
-            <button
-              type="submit"
-              className={styles.saveButton}
-              disabled={loading}
-            >
-              {loading ? 'Сохранение...' : 'Сохранить изменения'}
-            </button>
-          </form>
+          </div>
         </div>
       </div>
       <Footer />

@@ -8,7 +8,7 @@ import Register from './pages/Register';
 import Quizzes from './pages/Quizzes';
 import Leaderboard from './pages/Leaderboard';
 import CreateRoom from './pages/CreateRoom';
-import Profile from './pages/Profile'; // Добавляем импорт
+import Profile from './pages/Profile';
 
 function App() {
   return (
@@ -21,7 +21,9 @@ function App() {
           <Route path="/quizzes" element={<Quizzes />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/create-room" element={<CreateRoom />} />
-          <Route path="/profile" element={<Profile />} /> {/* Добавляем маршрут */}
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/profile/history" element={<Profile />} />
+          <Route path="/profile/bookmarks" element={<Profile />} />
         </Routes>
       </div>
     </Router>
