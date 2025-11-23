@@ -3,6 +3,9 @@ from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.utils import timezone
 
+from .domain.services.score_calculator import ScoreCalculator
+from .domain.value_objects.score import Score
+
 User = settings.AUTH_USER_MODEL
 
 
@@ -197,30 +200,44 @@ class PlayerAnswer(models.Model):
         return f"{status} {self.user} answered in Round #{self.round.round_number} (+{self.points_earned} pts)"
 
     def calculate_points(self):
+        # Создаём экземпляр доменного сервиса
+        calculator = ScoreCalculator()
 
-        if not self.is_correct:
-            self.points_earned = 0
-            return 0
+        # Определяем, является ли это первым правильным ответом
+        is_first_answer = (
+            self.is_correct and
+            self.user_id == self.round.first_answer_user_id
+        )
 
-        base_points = self.round.question.points
-        time_limit = self.round.time_limit
+        # Делегируем расчёт доменному сервису
+        score = calculator.calculate(
+            is_correct=self.is_correct,
+            base_points=self.round.question.points,
+            time_taken=self.time_taken,
+            time_limit=self.round.time_limit,
+            is_first_answer=is_first_answer
+        )
 
-        # Бонус за скорость: чем быстрее ответ, тем больше бонус
-        # Максимум +50% к базовым очкам
-        if self.time_taken < time_limit:
-            speed_bonus_ratio = (time_limit - self.time_taken) / time_limit
-            speed_bonus = int(base_points * speed_bonus_ratio * 0.5)
-        else:
-            speed_bonus = 0
+        # Сохраняем результат
+        self.points_earned = score.value
+        return self.points_earned
 
-        # Бонус за первый правильный ответ: +50%
-        first_answer_bonus = 0
-        if self.user_id == self.round.first_answer_user_id:
-            first_answer_bonus = int(base_points * 0.5)
+    def publish_answered_event(self):
+        from apps.game.domain.events import QuestionAnsweredEvent
+        from apps.game.infrastructure.event_bus import event_bus
 
-        total_points = base_points + speed_bonus + first_answer_bonus
-        self.points_earned = total_points
-        return total_points
+        event = QuestionAnsweredEvent(
+            session_id=self.round.session_id,
+            round_id=self.round_id,
+            user_id=self.user_id,
+            answer_id=self.id,
+            is_correct=self.is_correct,
+            points_earned=self.points_earned,
+            time_taken=self.time_taken,
+            is_first_answer=(self.user_id == self.round.first_answer_user_id)
+        )
+
+        event_bus.publish(event)
 
 
 class PlayerGameStats(models.Model):
