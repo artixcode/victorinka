@@ -36,6 +36,11 @@ else:
     print('Superuser already exists')
 " || true
 
-echo "Starting Django development server..."
-python manage.py runserver 0.0.0.0:8000
+if [ $# -eq 0 ]; then
+    echo "Starting Django development server..."
+    exec python manage.py runserver 0.0.0.0:8000
+else
+    echo "Executing command: $@"
+    exec "$@"
+fi
 

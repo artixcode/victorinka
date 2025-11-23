@@ -33,6 +33,24 @@ services:
       retries: 5
     restart: unless-stopped
 
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-admin}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   backend:
     build:
       context: .
@@ -49,6 +67,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
@@ -59,6 +79,74 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_DB: 0
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-admin}
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: ./docker/backend/Dockerfile
+    container_name: celery_worker
+    env_file: .env
+    volumes:
+      - ./backend:/app/backend
+    working_dir: /app/backend/src
+    command: celery -A config worker --loglevel=info --concurrency=2
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-victorinka_db}
+      POSTGRES_USER: ${POSTGRES_USER:-victorinka_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-victorinka_pass}
+      DB_ENGINE: postgresql
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-admin}
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: ./docker/backend/Dockerfile
+    container_name: celery_beat
+    env_file: .env
+    volumes:
+      - ./backend:/app/backend
+    working_dir: /app/backend/src
+    command: celery -A config beat --loglevel=info
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-victorinka_db}
+      POSTGRES_USER: ${POSTGRES_USER:-victorinka_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-victorinka_pass}
+      DB_ENGINE: postgresql
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-admin}
 
   frontend:
     build:
@@ -91,3 +179,6 @@ volumes:
     name: victorinka_postgres_data
   redis_data:
     name: victorinka_redis_data
+  rabbitmq_data:
+    name: victorinka_rabbitmq_data
+

@@ -190,3 +190,21 @@ CACHES = {
         },
     }
 }
+
+# Celery настройки
+CELERY_BROKER_URL = (
+    f"amqp://{os.getenv('RABBITMQ_USER', 'admin')}:"
+    f"{os.getenv('RABBITMQ_PASS', 'admin')}@"
+    f"{os.getenv('RABBITMQ_HOST', 'localhost')}:"
+    f"{os.getenv('RABBITMQ_PORT', '5672')}//"
+)
+CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}/1"
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60
+CELERY_WORKER_PREFETCH_MULTIPLIER = 4
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 1000
