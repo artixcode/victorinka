@@ -37,8 +37,8 @@ else:
 " || true
 
 if [ $# -eq 0 ]; then
-    echo "Starting Django development server..."
-    exec python manage.py runserver 0.0.0.0:8000
+    echo "Starting Daphne ASGI server (WebSocket support)..."
+    exec daphne -b 0.0.0.0 -p 8000 config.asgi:application
 else
     echo "Executing command: $@"
     exec "$@"
