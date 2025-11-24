@@ -54,6 +54,7 @@ urlpatterns = [
     path("api/auth/me/", MeView.as_view()),
     path("api/auth/logout/", LogoutView.as_view()),
     path("api/auth/logout_all/", LogoutAllView.as_view(), name="logout_all"),
+    path("api/health/", core_views.health),
 
     # Password Reset (восстановление пароля)
     path("api/auth/password-reset/request/", PasswordResetRequestView.as_view(), name="password-reset-request"),
