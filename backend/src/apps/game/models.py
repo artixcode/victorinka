@@ -1,3 +1,306 @@
 from django.db import models
+from django.conf import settings
+from django.core.validators import MinValueValidator
+from django.utils import timezone
 
-# Create your models here.
+from .domain.services.score_calculator import ScoreCalculator
+from .domain.value_objects.score import Score
+
+User = settings.AUTH_USER_MODEL
+
+
+class GameSession(models.Model):
+
+    class Status(models.TextChoices):
+        WAITING = "waiting", "Ожидание"
+        PLAYING = "playing", "Идёт игра"
+        PAUSED = "paused", "Пауза"
+        FINISHED = "finished", "Завершена"
+
+    room = models.ForeignKey(
+        "rooms.Room",
+        on_delete=models.CASCADE,
+        related_name="game_sessions",
+        help_text="Комната, в которой проходит игра"
+    )
+    quiz = models.ForeignKey(
+        "questions.Quiz",
+        on_delete=models.PROTECT,
+        related_name="game_sessions",
+        help_text="Викторина, которая используется в игре"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.WAITING,
+        db_index=True
+    )
+    current_question_index = models.PositiveIntegerField(
+        default=0,
+        help_text="Индекс текущего вопроса (0-based)"
+    )
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["room", "status"]),
+            models.Index(fields=["-created_at"]),
+        ]
+
+    def __str__(self):
+        return f"Game #{self.pk}: {self.quiz.title} in {self.room.name} ({self.get_status_display()})"
+
+    def start(self):
+        if self.status == self.Status.WAITING:
+            self.status = self.Status.PLAYING
+            self.started_at = timezone.now()
+            self.save(update_fields=["status", "started_at"])
+
+    def pause(self):
+        if self.status == self.Status.PLAYING:
+            self.status = self.Status.PAUSED
+            self.save(update_fields=["status"])
+
+    def resume(self):
+        if self.status == self.Status.PAUSED:
+            self.status = self.Status.PLAYING
+            self.save(update_fields=["status"])
+
+    def finish(self):
+        if self.status in [self.Status.PLAYING, self.Status.PAUSED]:
+            self.status = self.Status.FINISHED
+            self.finished_at = timezone.now()
+            self.save(update_fields=["status", "finished_at"])
+
+
+class GameRound(models.Model):
+
+    class Status(models.TextChoices):
+        WAITING = "waiting", "Ожидание"
+        ACTIVE = "active", "Активный"
+        COMPLETED = "completed", "Завершён"
+
+    session = models.ForeignKey(
+        GameSession,
+        on_delete=models.CASCADE,
+        related_name="rounds",
+        help_text="Игровая сессия"
+    )
+    question = models.ForeignKey(
+        "questions.Question",
+        on_delete=models.PROTECT,
+        related_name="game_rounds",
+        help_text="Вопрос в этом раунде"
+    )
+    round_number = models.PositiveIntegerField(
+        help_text="Номер раунда (1-based)",
+        validators=[MinValueValidator(1)]
+    )
+    time_limit = models.PositiveIntegerField(
+        default=30,
+        help_text="Лимит времени на ответ (в секундах)",
+        validators=[MinValueValidator(5)]
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.WAITING
+    )
+    first_answer_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="first_answers",
+        help_text="Игрок, ответивший первым"
+    )
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["session", "round_number"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["session", "round_number"],
+                name="uq_game_round_session_number"
+            )
+        ]
+        indexes = [
+            models.Index(fields=["session", "status"]),
+        ]
+
+    def __str__(self):
+        return f"Round #{self.round_number} in Game #{self.session_id}: {self.question.text[:50]}"
+
+    def start(self):
+        if self.status == self.Status.WAITING:
+            self.status = self.Status.ACTIVE
+            self.started_at = timezone.now()
+            self.save(update_fields=["status", "started_at"])
+
+    def complete(self):
+        if self.status == self.Status.ACTIVE:
+            self.status = self.Status.COMPLETED
+            self.completed_at = timezone.now()
+            self.save(update_fields=["status", "completed_at"])
+
+
+class PlayerAnswer(models.Model):
+
+    round = models.ForeignKey(
+        GameRound,
+        on_delete=models.CASCADE,
+        related_name="answers",
+        help_text="Раунд игры"
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="game_answers",
+        help_text="Игрок"
+    )
+    selected_option = models.ForeignKey(
+        "questions.AnswerOption",
+        on_delete=models.PROTECT,
+        related_name="player_selections",
+        help_text="Выбранный вариант ответа"
+    )
+    is_correct = models.BooleanField(
+        default=False,
+        help_text="Правильный ли ответ"
+    )
+    points_earned = models.PositiveIntegerField(
+        default=0,
+        help_text="Очки, заработанные за ответ"
+    )
+    time_taken = models.FloatField(
+        help_text="Время, затраченное на ответ (в секундах)",
+        validators=[MinValueValidator(0.0)]
+    )
+    answered_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["answered_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["round", "user"],
+                name="uq_player_answer_round_user"
+            )
+        ]
+        indexes = [
+            models.Index(fields=["round", "user"]),
+            models.Index(fields=["user", "-answered_at"]),
+        ]
+
+    def __str__(self):
+        status = "✓" if self.is_correct else "✗"
+        return f"{status} {self.user} answered in Round #{self.round.round_number} (+{self.points_earned} pts)"
+
+    def calculate_points(self):
+        # Создаём экземпляр доменного сервиса
+        calculator = ScoreCalculator()
+
+        # Определяем, является ли это первым правильным ответом
+        is_first_answer = (
+            self.is_correct and
+            self.user_id == self.round.first_answer_user_id
+        )
+
+        # Делегируем расчёт доменному сервису
+        score = calculator.calculate(
+            is_correct=self.is_correct,
+            base_points=self.round.question.points,
+            time_taken=self.time_taken,
+            time_limit=self.round.time_limit,
+            is_first_answer=is_first_answer
+        )
+
+        # Сохраняем результат
+        self.points_earned = score.value
+        return self.points_earned
+
+    def publish_answered_event(self):
+        from apps.game.domain.events import QuestionAnsweredEvent
+        from apps.game.infrastructure.event_bus import event_bus
+
+        event = QuestionAnsweredEvent(
+            session_id=self.round.session_id,
+            round_id=self.round_id,
+            user_id=self.user_id,
+            answer_id=self.id,
+            is_correct=self.is_correct,
+            points_earned=self.points_earned,
+            time_taken=self.time_taken,
+            is_first_answer=(self.user_id == self.round.first_answer_user_id)
+        )
+
+        event_bus.publish(event)
+
+
+class PlayerGameStats(models.Model):
+
+    session = models.ForeignKey(
+        GameSession,
+        on_delete=models.CASCADE,
+        related_name="player_stats",
+        help_text="Игровая сессия"
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="game_stats",
+        help_text="Игрок"
+    )
+    total_points = models.PositiveIntegerField(
+        default=0,
+        help_text="Всего очков в этой игре"
+    )
+    correct_answers = models.PositiveIntegerField(
+        default=0,
+        help_text="Количество правильных ответов"
+    )
+    wrong_answers = models.PositiveIntegerField(
+        default=0,
+        help_text="Количество неправильных ответов"
+    )
+    rank = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Место игрока в этой игре (1 = победитель)"
+    )
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-total_points", "completed_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["session", "user"],
+                name="uq_player_stats_session_user"
+            )
+        ]
+        indexes = [
+            models.Index(fields=["session", "-total_points"]),
+            models.Index(fields=["user", "-total_points"]),
+        ]
+        verbose_name = "Player Game Statistics"
+        verbose_name_plural = "Player Game Statistics"
+
+    def __str__(self):
+        return f"{self.user} in Game #{self.session_id}: {self.total_points} pts (Rank: {self.rank or 'TBD'})"
+
+    def update_from_answer(self, answer: PlayerAnswer):
+        if answer.is_correct:
+            self.correct_answers += 1
+        else:
+            self.wrong_answers += 1
+
+        self.total_points += answer.points_earned
+        self.save(update_fields=["total_points", "correct_answers", "wrong_answers"])
+
+    def finalize(self):
+        self.completed_at = timezone.now()
+        self.save(update_fields=["completed_at"])
+

@@ -1,0 +1,59 @@
+/* Profile.module.css */
+.pageContainer {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.profilePage {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 2rem 1rem;
+  background: linear-gradient(135deg, #8A2BE2 0%, #9370DB 50%, #BA55D3 100%);
+  min-height: calc(100vh - 140px);
+}
+
+.profileContainer {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 1200px;
+  min-height: 600px;
+  overflow: hidden;
+}
+
+.profileLayout {
+  display: flex;
+  min-height: 600px;
+}
+
+.profileContent {
+  flex: 1;
+  padding: 2rem;
+  background: #f8f9fa;
+  overflow-y: auto;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .profilePage {
+    padding: 1rem 0.5rem;
+  }
+
+  .profileContainer {
+    border-radius: 15px;
+  }
+
+  .profileLayout {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .profileContent {
+    padding: 1.5rem;
+    min-height: 400px;
+  }
+}

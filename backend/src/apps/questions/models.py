@@ -59,6 +59,8 @@ class Quiz(models.Model):
     topics = models.ManyToManyField(Topic, related_name="quizzes", blank=True)
     tags = models.ManyToManyField(Tag, related_name="quizzes", blank=True)
 
+    views_count = models.PositiveIntegerField(default=0, db_index=True, help_text="Количество просмотров")
+
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -86,6 +88,10 @@ class Quiz(models.Model):
     def archive(self):
         self.status = Quiz.Status.ARCHIVED
         self.save(update_fields=["status"])
+
+    def increment_views(self):
+        self.views_count += 1
+        self.save(update_fields=["views_count"])
 
 
 class Question(models.Model):
