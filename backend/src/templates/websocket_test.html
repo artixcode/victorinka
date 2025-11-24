@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест WebSocket Game Room</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .status.disconnected {
+            background: #fee;
+            color: #c00;
+        }
+        .status.connected {
+            background: #efe;
+            color: #0a0;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        input, button {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
+        input {
+            width: 300px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .messages {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .message {
+            padding: 8px;
+            margin-bottom: 5px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+        .message.system {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        .message.player_joined {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+        .message.player_left {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+        .message.chat {
+            background: white;
+            border-left: 3px solid #667eea;
+        }
+        .message.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .room-info {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+        .players-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .player-badge {
+            background: #667eea;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 WebSocket Game Room Test</h1>
+
+        <div id="status" class="status disconnected">
+            ❌ Отключено
+        </div>
+
+        <div class="input-group">
+            <label for="roomId">ID комнаты:</label>
+            <input type="number" id="roomId" value="1" min="1">
+        </div>
+
+        <div class="input-group">
+            <label for="token">Bearer Token (из Swagger):</label>
+            <input type="text" id="token" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+        </div>
+
+        <button id="connectBtn" onclick="connect()">Подключиться</button>
+        <button id="disconnectBtn" onclick="disconnect()" disabled>Отключиться</button>
+
+        <div style="margin-top: 30px;">
+            <h3>💬 Чат комнаты</h3>
+            <div class="input-group">
+                <input type="text" id="messageInput" placeholder="Введите сообщение..." disabled>
+                <button id="sendBtn" onclick="sendMessage()" disabled>Отправить</button>
+            </div>
+        </div>
+
+        <div class="room-info" id="roomInfo" style="display: none;">
+            <h4>📊 Информация о комнате</h4>
+            <p>Игроков в комнате: <strong id="playerCount">0</strong></p>
+            <div class="players-list" id="playersList"></div>
+        </div>
+
+        <div class="messages" id="messages"></div>
+    </div>
+
+    <script>
+        let socket = null;
+        let roomId = null;
+        let token = null;
+
+        function addMessage(text, type = 'system') {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${text}`;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function updateStatus(connected) {
+            const statusDiv = document.getElementById('status');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            const messageInput = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendBtn');
+
+            if (connected) {
+                statusDiv.className = 'status connected';
+                statusDiv.innerHTML = '✅ Подключено';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+            } else {
+                statusDiv.className = 'status disconnected';
+                statusDiv.innerHTML = '❌ Отключено';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                messageInput.disabled = true;
+                sendBtn.disabled = true;
+            }
+        }
+
+        function updateRoomInfo(data) {
+            const roomInfo = document.getElementById('roomInfo');
+            const playerCount = document.getElementById('playerCount');
+            const playersList = document.getElementById('playersList');
+
+            roomInfo.style.display = 'block';
+
+            if (data.player_count !== undefined) {
+                playerCount.textContent = data.player_count;
+            }
+
+            if (data.players) {
+                playersList.innerHTML = '';
+                data.players.forEach(player => {
+                    const badge = document.createElement('div');
+                    badge.className = 'player-badge';
+                    badge.textContent = player.username;
+                    playersList.appendChild(badge);
+                });
+            }
+        }
+
+        function connect() {
+            roomId = document.getElementById('roomId').value;
+            token = document.getElementById('token').value;
+
+            if (!roomId) {
+                alert('Введите ID комнаты');
+                return;
+            }
+
+            if (!token) {
+                alert('Введите Bearer токен из Swagger (/api/auth/login/)');
+                return;
+            }
+
+            // WebSocket URL с токеном в query параметре
+            const wsUrl = `ws://localhost/ws/room/${roomId}/?token=${token}`;
+
+            addMessage(`Подключение к комнате ${roomId}...`, 'system');
+
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = function(e) {
+                addMessage('✅ WebSocket соединение установлено!', 'system');
+                updateStatus(true);
+            };
+
+            socket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                console.log('Получено:', data);
+
+                switch(data.type) {
+                    case 'room_state':
+                        addMessage('📊 Получено состояние комнаты', 'system');
+                        updateRoomInfo(data.data);
+                        break;
+
+                    case 'player_joined':
+                        addMessage(`👤 ${data.data.username} присоединился к комнате`, 'player_joined');
+                        updateRoomInfo(data.data.room_info);
+                        break;
+
+                    case 'player_left':
+                        addMessage(`👋 ${data.data.username} покинул комнату`, 'player_left');
+                        updateRoomInfo(data.data.room_info);
+                        break;
+
+                    case 'chat_message':
+                        addMessage(`<strong>${data.data.username}:</strong> ${data.data.message}`, 'chat');
+                        break;
+
+                    case 'error':
+                        addMessage(`❌ Ошибка: ${data.message}`, 'error');
+                        break;
+
+                    default:
+                        addMessage(`Неизвестное событие: ${data.type}`, 'system');
+                }
+            };
+
+            socket.onerror = function(error) {
+                addMessage(`❌ Ошибка WebSocket: ${error.message}`, 'error');
+                console.error('WebSocket error:', error);
+            };
+
+            socket.onclose = function(event) {
+                if (event.wasClean) {
+                    addMessage(`Соединение закрыто (код: ${event.code})`, 'system');
+                } else {
+                    addMessage(`❌ Соединение разорвано (код: ${event.code})`, 'error');
+                }
+                updateStatus(false);
+            };
+        }
+
+        function disconnect() {
+            if (socket) {
+                socket.close();
+                socket = null;
+                addMessage('Отключение...', 'system');
+            }
+        }
+
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+
+            if (!message) {
+                alert('Введите сообщение');
+                return;
+            }
+
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                alert('WebSocket не подключен');
+                return;
+            }
+
+            const data = {
+                type: 'chat_message',
+                message: message
+            };
+
+            socket.send(JSON.stringify(data));
+            messageInput.value = '';
+        }
+
+        // Enter для отправки сообщения
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
+

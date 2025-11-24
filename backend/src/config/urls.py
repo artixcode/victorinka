@@ -3,6 +3,7 @@ from django.urls import path, re_path
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
+from django.conf import settings
 from apps.core import views as core_views
 from apps.users.views import (
     RegisterView, LoginView, MeView, LogoutView, LogoutAllView,
@@ -42,6 +43,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("", core_views.home, name="home"),
     path("health/", core_views.health, name="health"),
+    path("ws-test/", core_views.websocket_test, name="websocket-test"),  # Тестовая страница WebSocket
 
     #swagger
     re_path(r"^swagger(?P<format>\.json|\.yaml)$", schema_view.without_ui(cache_timeout=0), name="schema-json"),

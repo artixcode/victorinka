@@ -100,6 +100,49 @@ class IPlayerGameStatsRepository(ABC):
         """
         pass
 
+
+class IRoomStateRepository(ABC):
+
+    @abstractmethod
+    def add_player(self, room_id: int, user_id: int, username: str, channel_name: str) -> None:
+        """Добавить игрока в комнату."""
+        pass
+
+    @abstractmethod
+    def remove_player(self, room_id: int, user_id: int) -> None:
+        """Удалить игрока из комнаты."""
+        pass
+
+    @abstractmethod
+    def get_players(self, room_id: int) -> List[dict]:
+        """Получить список всех игроков в комнате."""
+        pass
+
+    @abstractmethod
+    def get_player_count(self, room_id: int) -> int:
+        """Получить количество игроков в комнате."""
+        pass
+
+    @abstractmethod
+    def is_player_in_room(self, room_id: int, user_id: int) -> bool:
+        """Проверить, находится ли игрок в комнате."""
+        pass
+
+    @abstractmethod
+    def add_message(self, room_id: int, user_id: int, username: str, message: str) -> None:
+        """Добавить сообщение в чат комнаты."""
+        pass
+
+    @abstractmethod
+    def get_recent_messages(self, room_id: int, limit: int = 50) -> List[dict]:
+        """Получить последние N сообщений чата."""
+        pass
+
+    @abstractmethod
+    def clear_room(self, room_id: int) -> None:
+        """Очистить всё состояние комнаты (при завершении игры)."""
+        pass
+
     @abstractmethod
     def bulk_create(self, stats_list: List) -> None:
         """
