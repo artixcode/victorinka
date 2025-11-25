@@ -1,3 +1,4 @@
+// pages/Quizzes.js
 import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -127,7 +128,7 @@ const Quizzes = () => {
 
   if (loading) {
     return (
-      <div>
+      <div className={styles.pageContainer}>
         <Header />
         <main className={styles.main}>
           <div className={styles.loading}>Загрузка викторин...</div>
@@ -139,7 +140,7 @@ const Quizzes = () => {
 
   if (error) {
     return (
-      <div>
+      <div className={styles.pageContainer}>
         <Header />
         <main className={styles.main}>
           <div className={styles.error}>{error}</div>
@@ -153,7 +154,7 @@ const Quizzes = () => {
   }
 
   return (
-    <div>
+    <div className={styles.pageContainer}>
       <Header />
       <main className={styles.main}>
         <div className={styles.headerSection}>
@@ -175,11 +176,18 @@ const Quizzes = () => {
               <span className={styles.searchIcon}>🔍</span>
             </div>
 
-            {user && (
-              <Link to="/create-quiz" className={styles.createButton}>
-                + Создать викторину
-              </Link>
-            )}
+            <div className={styles.userControls}>
+              {user && (
+                <>
+                  <Link to="/my-quizzes" className={styles.myQuizzesButton}>
+                    Мои викторины
+                  </Link>
+                  <Link to="/create-quiz" className={styles.createButton}>
+                    + Создать викторину
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
