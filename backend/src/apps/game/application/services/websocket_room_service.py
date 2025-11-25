@@ -1,13 +1,53 @@
 from typing import Optional, Dict, List
+import re
 from apps.game.domain.services.room_session_service import RoomSessionService
 from apps.game.infrastructure.redis_room_repository import room_state_repository
 
 
 class WebSocketRoomService:
 
+    MESSAGE_MIN_LENGTH = 1
+    MESSAGE_MAX_LENGTH = 500
 
     def __init__(self):
         self.room_session_service = RoomSessionService(room_state_repository)
+        self.repository = room_state_repository
+
+    def initialize_room_metadata(self, room_id: int, room_name: str, status: str, host_id: int) -> None:
+        """
+        Инициализировать метаданные комнаты в Redis при первом подключении.
+        """
+        # Проверяем, существуют ли уже метаданные
+        existing = self.repository.get_room_metadata(room_id)
+        if not existing:
+            self.repository.set_room_metadata(
+                room_id=room_id,
+                room_name=room_name,
+                status=status,
+                host_id=host_id
+            )
+
+    def validate_message(self, message: str) -> tuple[bool, Optional[str]]:
+        """
+        Валидация сообщения чата.
+        """
+        if not message or not message.strip():
+            return False, "Сообщение не может быть пустым"
+
+        message = message.strip()
+
+        if len(message) < self.MESSAGE_MIN_LENGTH:
+            return False, f"Сообщение слишком короткое (минимум {self.MESSAGE_MIN_LENGTH} символ)"
+
+        if len(message) > self.MESSAGE_MAX_LENGTH:
+            return False, f"Сообщение слишком длинное (максимум {self.MESSAGE_MAX_LENGTH} символов)"
+
+        # Проверка на спам (только пробелы, символы, эмодзи без текста)
+        if not re.search(r'[a-zA-Zа-яА-ЯёЁ0-9]', message):
+            return False, "Сообщение должно содержать текст или цифры"
+
+        return True, None
+
 
     def handle_player_join(
         self,
@@ -19,6 +59,9 @@ class WebSocketRoomService:
         """
         Обработка присоединения игрока к комнате.
         """
+        # Обновляем TTL комнаты при активности
+        self.repository.refresh_room_ttl(room_id)
+
         # Вызываем domain service
         event = self.room_session_service.join_room(
             room_id=room_id,
@@ -75,6 +118,21 @@ class WebSocketRoomService:
         """
         Обработка сообщения в чате комнаты.
         """
+        # Валидация сообщения
+        is_valid, error = self.validate_message(message)
+        if not is_valid:
+            return {
+                'error': True,
+                'message': error
+            }
+
+        # Очистка сообщения
+        message = message.strip()[:self.MESSAGE_MAX_LENGTH]
+
+        # Обновляем TTL комнаты при активности
+        self.repository.refresh_room_ttl(room_id)
+
+        # Вызываем domain service
         event = self.room_session_service.send_message(
             room_id=room_id,
             user_id=user_id,
@@ -95,9 +153,28 @@ class WebSocketRoomService:
 
     def get_room_state(self, room_id: int) -> Dict:
         """
-        Получить текущее состояние комнаты.
+        Получить полное состояние комнаты включая метаданные.
         """
-        return self.room_session_service.get_room_info(room_id)
+        # Базовая информация
+        room_info = self.room_session_service.get_room_info(room_id)
+
+        # Метаданные из Redis
+        metadata = self.repository.get_room_metadata(room_id)
+
+        # Объединяем данные
+        if metadata:
+            room_info.update({
+                'room_name': metadata.get('room_name'),
+                'status': metadata.get('status'),
+                'host_id': metadata.get('host_id'),
+                'created_at': metadata.get('created_at')
+            })
+
+        # Добавляем последние сообщения
+        recent_messages = self.repository.get_recent_messages(room_id, limit=20)
+        room_info['recent_messages'] = recent_messages
+
+        return room_info
 
     def get_players(self, room_id: int) -> List[Dict]:
         """Получить список игроков."""

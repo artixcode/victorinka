@@ -34,7 +34,7 @@ class GameRoomConsumer(AsyncWebsocketConsumer):
             return
 
         self.user_id = self.user.id
-        self.username = self.user.username or self.user.email
+        self.username = self.user.nickname or self.user.email
 
         # Проверяем существование комнаты
         room_exists = await self._check_room_exists(self.room_id)
@@ -44,6 +44,9 @@ class GameRoomConsumer(AsyncWebsocketConsumer):
 
         # Принимаем соединение
         await self.accept()
+
+        # Инициализируем метаданные комнаты в Redis (если еще нет)
+        await self._initialize_room_metadata()
 
         # Добавляем в группу
         await self.channel_layer.group_add(
@@ -159,6 +162,11 @@ class GameRoomConsumer(AsyncWebsocketConsumer):
             await self.send_error('Не удалось отправить сообщение')
             return
 
+        # Проверяем на ошибку валидации
+        if result.get('error'):
+            await self.send_error(result.get('message', 'Ошибка валидации'))
+            return
+
         # Рассылаем сообщение всем в комнате
         await self.channel_layer.group_send(
             self.room_group_name,
@@ -217,3 +225,21 @@ class GameRoomConsumer(AsyncWebsocketConsumer):
         """Проверить существование комнаты в БД."""
         from apps.rooms.models import Room
         return Room.objects.filter(id=room_id).exists()
+
+    @database_sync_to_async
+    def _initialize_room_metadata(self):
+        """Инициализировать метаданные комнаты в Redis из БД."""
+        from apps.rooms.models import Room
+        from apps.game.application.services.websocket_room_service import websocket_room_service
+
+        try:
+            room = Room.objects.get(id=self.room_id)
+            websocket_room_service.initialize_room_metadata(
+                room_id=room.id,
+                room_name=room.name,
+                status=room.status,
+                host_id=room.host_id
+            )
+        except Room.DoesNotExist:
+            pass
+
