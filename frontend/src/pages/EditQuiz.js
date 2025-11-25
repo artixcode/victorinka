@@ -1,5 +1,5 @@
-import React, {useState} from 'react';
-import {useNavigate} from 'react-router-dom';
+import React, {useState, useEffect} from 'react';
+import {useParams, useNavigate} from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import QuestionForm from '../components/QuestionForm';
@@ -7,7 +7,8 @@ import {quizzesAPI} from '../services/quizzesAPI';
 import {questionsAPI} from '../services/questionsAPI';
 import styles from '../styles/CreateQuiz.module.css';
 
-const CreateQuiz = () => {
+const EditQuiz = () => {
+    const {id} = useParams();
     const navigate = useNavigate();
     const [quiz, setQuiz] = useState({
         title: '',
@@ -15,24 +16,84 @@ const CreateQuiz = () => {
         status: 'draft',
         visibility: 'public'
     });
-
     const [questions, setQuestions] = useState([]);
     const [showQuestionForm, setShowQuestionForm] = useState(false);
     const [editingQuestion, setEditingQuestion] = useState(null);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        fetchQuizData();
+    }, [id]);
+
+    const fetchQuizData = async () => {
+        try {
+            setLoading(true);
+            const quizResponse = await quizzesAPI.getMyQuiz(id);
+            const quizData = quizResponse.data;
+
+            setQuiz({
+                title: quizData.title,
+                description: quizData.description,
+                status: quizData.status,
+                visibility: quizData.visibility
+            });
+
+            if (quizData.questions_list && Array.isArray(quizData.questions_list)) {
+                const questionsWithDetails = await Promise.all(
+                    quizData.questions_list.map(async (q) => {
+                        try {
+                            const questionResponse = await questionsAPI.getQuestion(q.id);
+                            return {
+                                ...questionResponse.data,
+                                options: Array.isArray(questionResponse.data.options_readonly)
+                                    ? questionResponse.data.options_readonly
+                                    : []
+                            };
+                        } catch (error) {
+                            console.error(`Ошибка загрузки вопроса ${q.id}:`, error);
+                            return {
+                                ...q,
+                                options: []
+                            };
+                        }
+                    })
+                );
+                setQuestions(questionsWithDetails);
+            } else {
+                setQuestions([]);
+            }
+        } catch (err) {
+            console.error('Ошибка загрузки викторины:', err);
+            alert('Ошибка загрузки викторины');
+            navigate('/my-quizzes');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleQuizChange = (field, value) => {
         setQuiz({...quiz, [field]: value});
     };
 
     const handleAddQuestion = (questionData) => {
+        const questionWithDefaults = {
+            ...questionData,
+            options: Array.isArray(questionData.options) ? questionData.options : [],
+            points: questionData.points || 1,
+            difficulty: questionData.difficulty || 'medium'
+        };
+
         if (editingQuestion !== null) {
             const newQuestions = [...questions];
-            newQuestions[editingQuestion] = questionData;
+            newQuestions[editingQuestion] = questionWithDefaults;
             setQuestions(newQuestions);
             setEditingQuestion(null);
         } else {
-            setQuestions([...questions, {...questionData, id: `new-${Date.now()}`}]);
+            setQuestions([...questions, {
+                ...questionWithDefaults,
+                id: `new-${Date.now()}`
+            }]);
         }
         setShowQuestionForm(false);
     };
@@ -43,11 +104,19 @@ const CreateQuiz = () => {
     };
 
     const handleDeleteQuestion = (index) => {
+        const questionToDelete = questions[index];
+
+        if (questionToDelete.id && !questionToDelete.id.toString().startsWith('new-')) {
+            if (!window.confirm('Вы уверены, что хотите удалить этот вопрос?')) {
+                return;
+            }
+        }
+
         const newQuestions = questions.filter((_, i) => i !== index);
         setQuestions(newQuestions);
     };
 
-    const handleSaveQuiz = async () => {
+    const handleUpdateQuiz = async () => {
         if (!quiz.title.trim()) {
             alert('Введите название викторины');
             return;
@@ -58,11 +127,21 @@ const CreateQuiz = () => {
             return;
         }
 
-        setLoading(true);
+        setSaving(true);
 
         try {
-            const createdQuestions = [];
-            for (const question of questions) {
+            await quizzesAPI.patchMyQuiz(id, {
+                title: quiz.title,
+                description: quiz.description,
+                status: quiz.status,
+                visibility: quiz.visibility
+            });
+
+            const questionOrders = [];
+
+            for (let i = 0; i < questions.length; i++) {
+                const question = questions[i];
+
                 const questionData = {
                     text: question.text || '',
                     explanation: question.explanation || '',
@@ -71,35 +150,56 @@ const CreateQuiz = () => {
                     options: Array.isArray(question.options) ? question.options.map((opt, index) => ({
                         text: opt.text || '',
                         is_correct: Boolean(opt.is_correct),
-                        order: index + 1 // Важное исправление: добавляем order
+                        order: index + 1
                     })) : []
                 };
 
-                const response = await questionsAPI.createQuestion(questionData);
-                createdQuestions.push(response.data);
+                let questionId;
+
+                if (question.id && question.id.toString().startsWith('new-')) {
+                    try {
+                        const response = await questionsAPI.createQuestion(questionData);
+                        questionId = response.data.id;
+                    } catch (error) {
+                        console.error('Ошибка создания вопроса:', error);
+                        continue;
+                    }
+                } else if (question.id) {
+                    questionId = question.id;
+                    try {
+                        await questionsAPI.updateQuestion(question.id, questionData);
+                    } catch (error) {
+                        console.error('Ошибка обновления вопроса:', error);
+                        try {
+                            await questionsAPI.patchQuestion(question.id, questionData);
+                        } catch (patchError) {
+                            console.error('Ошибка частичного обновления вопроса:', patchError);
+                        }
+                    }
+                }
+
+                if (questionId) {
+                    questionOrders.push({
+                        question_id: questionId,
+                        order: i
+                    });
+                }
             }
 
-            const questionOrders = createdQuestions.map((question, index) => ({
-                question_id: question.id,
-                order: index
-            }));
+            if (questionOrders.length > 0) {
+                await quizzesAPI.patchMyQuiz(id, {
+                    question_orders: questionOrders
+                });
+            }
 
-            await quizzesAPI.createQuiz({
-                title: quiz.title,
-                description: quiz.description,
-                status: quiz.status,
-                visibility: quiz.visibility,
-                question_orders: questionOrders
-            });
-
-            alert('Викторина успешно создана!');
-            navigate('/my-quizzes');
+            alert('Викторина успешно обновлена!');
+            navigate(`/quiz/${id}`);
 
         } catch (error) {
-            console.error('Ошибка при создании викторины:', error);
-            alert('Ошибка при создании викторины. Проверьте консоль для деталей.');
+            console.error('Общая ошибка при обновлении викторины:', error);
+            alert('Ошибка при обновлении викторины. Проверьте консоль для деталей.');
         } finally {
-            setLoading(false);
+            setSaving(false);
         }
     };
 
@@ -122,17 +222,31 @@ const CreateQuiz = () => {
                 key={optIndex}
                 className={`${styles.optionPreview} ${option.is_correct ? styles.correct : ''}`}
             >
-                {option.is_correct ? '✓ ' : ''}{option.text || 'Пустой вариант'}
-            </span>
+        {option.is_correct ? '✓ ' : ''}{option.text || 'Пустой вариант'}
+      </span>
         ));
     };
+
+    if (loading) {
+        return (
+            <div>
+                <Header/>
+                <main className={styles.main}>
+                    <div style={{textAlign: 'center', padding: '4rem', color: 'white'}}>
+                        Загрузка викторины...
+                    </div>
+                </main>
+                <Footer/>
+            </div>
+        );
+    }
 
     return (
         <div>
             <Header/>
             <main className={styles.main}>
                 <div className={styles.container}>
-                    <h1 className={styles.title}>Создание викторины</h1>
+                    <h1 className={styles.title}>Редактирование викторины</h1>
 
                     <div className={styles.quizInfo}>
                         <div className={styles.formGroup}>
@@ -215,11 +329,11 @@ const CreateQuiz = () => {
                                         <div className={styles.questionContent}>
                                             <h4>{question.text || 'Без текста'}</h4>
                                             <div className={styles.questionMeta}>
-                                                <span className={styles.difficulty}>
-                                                    {question.difficulty === 'easy' ? '🟢 Лёгкий' :
-                                                        question.difficulty === 'medium' ? '🟡 Средний' :
-                                                            question.difficulty === 'hard' ? '🔴 Сложный' : '⚪ Не указана'}
-                                                </span>
+                        <span className={styles.difficulty}>
+                          {question.difficulty === 'easy' ? '🟢 Лёгкий' :
+                              question.difficulty === 'medium' ? '🟡 Средний' :
+                                  question.difficulty === 'hard' ? '🔴 Сложный' : '⚪ Не указана'}
+                        </span>
                                                 <span className={styles.points}>🎯 {question.points || 0} баллов</span>
                                             </div>
                                             <div className={styles.optionsPreview}>
@@ -264,17 +378,17 @@ const CreateQuiz = () => {
 
                     <div className={styles.actions}>
                         <button
-                            onClick={() => navigate('/quizzes')}
+                            onClick={() => navigate(`/quiz/${id}`)}
                             className={styles.cancelButton}
                         >
                             Отмена
                         </button>
                         <button
-                            onClick={handleSaveQuiz}
-                            disabled={loading || questions.length === 0 || !quiz.title.trim()}
+                            onClick={handleUpdateQuiz}
+                            disabled={saving || questions.length === 0 || !quiz.title.trim()}
                             className={styles.saveButton}
                         >
-                            {loading ? 'Создание...' : 'Создать викторину'}
+                            {saving ? 'Сохранение...' : 'Сохранить изменения'}
                         </button>
                     </div>
                 </div>
@@ -284,4 +398,4 @@ const CreateQuiz = () => {
     );
 };
 
-export default CreateQuiz;
+export default EditQuiz;
