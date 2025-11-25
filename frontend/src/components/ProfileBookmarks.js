@@ -15,26 +15,18 @@ const ProfileBookmarks = () => {
     try {
       setLoading(true);
       const response = await cabinetAPI.getBookmarks();
-      console.log('Bookmarks API response:', response); // Для отладки
 
-      // Обрабатываем разные форматы ответа
       let bookmarksData = [];
       if (Array.isArray(response.data)) {
         bookmarksData = response.data;
       } else if (response.data && Array.isArray(response.data.results)) {
         bookmarksData = response.data.results;
-      } else if (response.data && response.data.bookmarks) {
-        bookmarksData = response.data.bookmarks;
-      } else {
-        // Если данные в другом формате, пробуем извлечь массив
-        bookmarksData = Object.values(response.data).find(Array.isArray) || [];
       }
 
       setBookmarks(bookmarksData);
     } catch (error) {
-      console.error('Ошибка загрузки закладок:', error);
       setError('Не удалось загрузить закладки');
-      setBookmarks([]); // Устанавливаем пустой массив при ошибке
+      setBookmarks([]);
     } finally {
       setLoading(false);
     }
@@ -45,7 +37,7 @@ const ProfileBookmarks = () => {
       await cabinetAPI.deleteBookmark(id);
       setBookmarks(bookmarks.filter(bookmark => bookmark.id !== id));
     } catch (error) {
-      console.error('Ошибка удаления закладки:', error);
+      await loadBookmarks();
       setError('Не удалось удалить закладку');
     }
   };
