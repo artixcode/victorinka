@@ -9,6 +9,9 @@ import Quizzes from './pages/Quizzes';
 import Leaderboard from './pages/Leaderboard';
 import CreateRoom from './pages/CreateRoom';
 import Profile from './pages/Profile';
+import CreateQuiz from './pages/CreateQuiz';
+import MyQuizzes from './pages/MyQuizzes';
+import QuizView from './pages/QuizView';
 
 function App() {
   return (
@@ -24,6 +27,9 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/profile/history" element={<Profile />} />
           <Route path="/profile/bookmarks" element={<Profile />} />
+          <Route path="/create-quiz" element={<CreateQuiz />} />
+          <Route path="/my-quizzes" element={<MyQuizzes />} />
+          <Route path="/quiz/:id" element={<QuizView />} />
         </Routes>
       </div>
     </Router>
