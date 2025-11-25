@@ -1,158 +1,363 @@
 .main {
-  flex: 1;
-  padding: 2rem 1rem;
-  max-width: 1000px;
-  margin: 0 auto;
-  width: 100%;
+    flex: 1;
+    padding: 2rem 1rem;
+    max-width: 800px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.container {
+    color: white;
 }
 
 .title {
-  font-size: 2.5rem;
-  margin-bottom: 2rem;
-  text-align: center;
-  color: white;
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    text-align: center;
+    color: white;
 }
 
 .quizInfo {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 15px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    margin-bottom: 2rem;
 }
 
 .formGroup {
-  margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
 }
 
 .formGroup label {
-  display: block;
-  color: white;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
 }
 
 .formGroup input,
 .formGroup textarea,
 .formGroup select {
-  width: 100%;
-  padding: 1rem;
-  border-radius: 10px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  font-size: 1rem;
+    width: 100%;
+    padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: white;
+    font-size: 1rem;
+}
+
+.formGroup input::placeholder,
+.formGroup textarea::placeholder {
+    color: rgba(255, 255, 255, 0.5);
 }
 
 .formRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+    display: flex;
+    gap: 1rem;
+}
+
+.formRow .formGroup {
+    flex: 1;
 }
 
 .questionsSection {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 15px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+    margin-bottom: 2rem;
 }
 
 .questionsHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.questionsHeader h2 {
+    color: white;
+    margin: 0;
 }
 
 .addQuestionButton {
-  padding: 0.8rem 1.5rem;
-  background: rgba(255, 255, 255, 0.95);
-  color: #8A2BE2;
-  border: none;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
+    padding: 1rem 2rem;
+    background: rgba(255, 255, 255, 0.95);
+    color: #8A2BE2;
+    border: none;
+    border-radius: 50px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.addQuestionButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.emptyQuestions {
+    text-align: center;
+    padding: 3rem;
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
 }
 
 .questionsList {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
 .questionItem {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-  padding: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
 }
 
 .questionContent {
-  flex: 1;
+    flex: 1;
+}
+
+.questionContent h4 {
+    margin: 0 0 1rem 0;
+    color: white;
+    font-size: 1.1rem;
 }
 
 .questionMeta {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 0.5rem;
-  flex-wrap: wrap;
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
 }
 
 .difficulty {
-  background: rgba(138, 43, 226, 0.3);
-  color: #8A2BE2;
-  padding: 0.3rem 0.8rem;
-  border-radius: 8px;
-  font-size: 0.8rem;
-  font-weight: 600;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.points {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.optionsPreview {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
 }
 
 .optionPreview {
-  padding: 0.5rem 0.8rem;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.8);
-  margin-bottom: 0.3rem;
+    padding: 0.3rem 0.6rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .optionPreview.correct {
-  background: rgba(76, 175, 80, 0.3);
-  color: #4CAF50;
+    background: rgba(76, 175, 80, 0.2);
+    color: #4CAF50;
+    border-left: 3px solid #4CAF50;
+}
+
+.questionActions {
+    display: flex;
+    gap: 0.5rem;
+    margin-left: 1rem;
+}
+
+.editButton, .deleteButton, .moveButton {
+    padding: 0.5rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    width: 2.5rem;
+    height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.editButton:hover {
+    background: rgba(255, 193, 7, 0.3);
+}
+
+.deleteButton:hover {
+    background: rgba(244, 67, 54, 0.3);
+}
+
+.moveButton:hover {
+    background: rgba(138, 43, 226, 0.3);
 }
 
 .actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 1.5rem;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.cancelButton {
+    padding: 1rem 2rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-radius: 50px;
+    font-weight: 600;
+    cursor: pointer;
 }
 
 .saveButton {
-  padding: 1rem 2rem;
-  background: rgba(255, 255, 255, 0.95);
-  color: #8A2BE2;
-  border: none;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
+    padding: 1rem 2rem;
+    background: rgba(255, 255, 255, 0.95);
+    color: #8A2BE2;
+    border: none;
+    border-radius: 50px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.saveButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.questionForm {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    margin-bottom: 1.5rem;
+}
+
+.formHeader {
+    margin-bottom: 1.5rem;
+}
+
+.formHeader h3 {
+    color: white;
+    margin: 0;
+}
+
+.optionsSection {
+    margin: 1.5rem 0;
+}
+
+.optionsHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.optionsHeader h4 {
+    color: white;
+    margin: 0;
+}
+
+.addOptionButton {
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.optionItem {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+}
+
+.optionInputs {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.optionText {
+    flex: 1;
+    padding: 0.8rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: white;
+}
+
+.optionText::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.correctLabel {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: white;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.removeOptionButton {
+    padding: 0.5rem;
+    background: rgba(244, 67, 54, 0.2);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.formActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
 }
 
 @media (max-width: 768px) {
-  .formRow {
-    grid-template-columns: 1fr;
-  }
+    .main {
+        padding: 1rem;
+    }
 
-  .questionItem {
-    flex-direction: column;
-    gap: 1rem;
-  }
+    .formRow {
+        flex-direction: column;
+        gap: 0;
+    }
 
-  .actions {
-    flex-direction: column;
-  }
+    .questionsHeader {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+
+    .questionItem {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .questionActions {
+        margin-left: 0;
+        justify-content: center;
+    }
+
+    .actions {
+        flex-direction: column;
+    }
+
+    .optionInputs {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+
+    .correctLabel {
+        justify-content: center;
+    }
 }

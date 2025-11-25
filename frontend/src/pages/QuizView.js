@@ -35,9 +35,8 @@ const QuizView = () => {
       try {
         response = await quizzesAPI.getQuiz(id);
         setQuiz(response.data);
-        return; // Если успешно, выходим
+        return;
       } catch (publicError) {
-        // Если 404, проверяем авторизацию и пробуем через эндпоинт автора
         if (publicError.response?.status === 404) {
           const userData = localStorage.getItem('user');
           if (!userData) {
@@ -45,7 +44,6 @@ const QuizView = () => {
             return;
           }
 
-          // Пробуем получить через эндпоинт автора
           try {
             response = await quizzesAPI.getMyQuiz(id);
             setQuiz(response.data);
@@ -145,9 +143,14 @@ const QuizView = () => {
               Автор: {quiz.author_name || 'Аноним'}
             </span>
             {isAuthor && (
-              <Link to="/my-quizzes" className={styles.manageLink}>
-                Управление →
-              </Link>
+              <div className={styles.authorLinks}>
+                <Link to="/my-quizzes" className={styles.manageLink}>
+                  Управление →
+                </Link>
+                <Link to={`/edit-quiz/${quiz.id}`} className={styles.editLink}>
+                  ✏️ Редактировать
+                </Link>
+              </div>
             )}
           </div>
         </div>
@@ -268,6 +271,9 @@ const QuizView = () => {
                 <div className={styles.authorActions}>
                   <Link to="/my-quizzes" className={styles.manageButton}>
                     📝 Управление викторинами
+                  </Link>
+                  <Link to={`/edit-quiz/${quiz.id}`} className={styles.editButton}>
+                    ✏️ Редактировать
                   </Link>
                   <button
                     onClick={() => navigate('/create-room', { state: { quizId: id } })}

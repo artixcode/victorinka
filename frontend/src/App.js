@@ -12,6 +12,7 @@ import Profile from './pages/Profile';
 import CreateQuiz from './pages/CreateQuiz';
 import MyQuizzes from './pages/MyQuizzes';
 import QuizView from './pages/QuizView';
+import EditQuiz from './pages/EditQuiz';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
           <Route path="/create-quiz" element={<CreateQuiz />} />
           <Route path="/my-quizzes" element={<MyQuizzes />} />
           <Route path="/quiz/:id" element={<QuizView />} />
+          <Route path="/edit-quiz/:id" element={<EditQuiz />} />
         </Routes>
       </div>
     </Router>

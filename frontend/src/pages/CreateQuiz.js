@@ -27,14 +27,12 @@ const CreateQuiz = () => {
 
     const handleAddQuestion = (questionData) => {
         if (editingQuestion !== null) {
-            // Редактирование существующего вопроса
             const newQuestions = [...questions];
             newQuestions[editingQuestion] = questionData;
             setQuestions(newQuestions);
             setEditingQuestion(null);
         } else {
-            // Добавление нового вопроса
-            setQuestions([...questions, {...questionData, id: Date.now()}]);
+            setQuestions([...questions, {...questionData, id: `new-${Date.now()}`}]);
         }
         setShowQuestionForm(false);
     };
@@ -65,13 +63,19 @@ const CreateQuiz = () => {
         try {
             const createdQuestions = [];
             for (const question of questions) {
-                const response = await questionsAPI.createQuestion({
-                    text: question.text,
-                    explanation: question.explanation,
-                    difficulty: question.difficulty,
-                    points: question.points,
-                    options: question.options
-                });
+                const questionData = {
+                    text: question.text || '',
+                    explanation: question.explanation || '',
+                    difficulty: question.difficulty || 'medium',
+                    points: parseInt(question.points) || 1,
+                    options: Array.isArray(question.options) ? question.options.map((opt, index) => ({
+                        text: opt.text || '',
+                        is_correct: Boolean(opt.is_correct),
+                        order: index + 1 // Важное исправление: добавляем order
+                    })) : []
+                };
+
+                const response = await questionsAPI.createQuestion(questionData);
                 createdQuestions.push(response.data);
             }
 
@@ -80,7 +84,7 @@ const CreateQuiz = () => {
                 order: index
             }));
 
-            const quizResponse = await quizzesAPI.createQuiz({
+            await quizzesAPI.createQuiz({
                 title: quiz.title,
                 description: quiz.description,
                 status: quiz.status,
@@ -89,11 +93,11 @@ const CreateQuiz = () => {
             });
 
             alert('Викторина успешно создана!');
-            navigate('/quizzes');
+            navigate('/my-quizzes');
 
         } catch (error) {
-            alert('Ошибка при создании викторины');
-            console.error(error);
+            console.error('Ошибка при создании викторины:', error);
+            alert('Ошибка при создании викторины. Проверьте консоль для деталей.');
         } finally {
             setLoading(false);
         }
@@ -104,6 +108,23 @@ const CreateQuiz = () => {
         const [movedQuestion] = newQuestions.splice(fromIndex, 1);
         newQuestions.splice(toIndex, 0, movedQuestion);
         setQuestions(newQuestions);
+    };
+
+    const renderOptionsPreview = (question) => {
+        const options = Array.isArray(question.options) ? question.options : [];
+
+        if (options.length === 0) {
+            return <span className={styles.optionPreview}>Нет вариантов ответа</span>;
+        }
+
+        return options.map((option, optIndex) => (
+            <span
+                key={optIndex}
+                className={`${styles.optionPreview} ${option.is_correct ? styles.correct : ''}`}
+            >
+                {option.is_correct ? '✓ ' : ''}{option.text || 'Пустой вариант'}
+            </span>
+        ));
     };
 
     return (
@@ -192,23 +213,17 @@ const CreateQuiz = () => {
                                 {questions.map((question, index) => (
                                     <div key={question.id || index} className={styles.questionItem}>
                                         <div className={styles.questionContent}>
-                                            <h4>{question.text}</h4>
+                                            <h4>{question.text || 'Без текста'}</h4>
                                             <div className={styles.questionMeta}>
-                        <span className={styles.difficulty}>
-                          {question.difficulty === 'easy' ? '🟢 Лёгкий' :
-                              question.difficulty === 'medium' ? '🟡 Средний' : '🔴 Сложный'}
-                        </span>
-                                                <span className={styles.points}>🎯 {question.points} баллов</span>
+                                                <span className={styles.difficulty}>
+                                                    {question.difficulty === 'easy' ? '🟢 Лёгкий' :
+                                                        question.difficulty === 'medium' ? '🟡 Средний' :
+                                                            question.difficulty === 'hard' ? '🔴 Сложный' : '⚪ Не указана'}
+                                                </span>
+                                                <span className={styles.points}>🎯 {question.points || 0} баллов</span>
                                             </div>
                                             <div className={styles.optionsPreview}>
-                                                {question.options.map((option, optIndex) => (
-                                                    <span
-                                                        key={optIndex}
-                                                        className={`${styles.optionPreview} ${option.is_correct ? styles.correct : ''}`}
-                                                    >
-                            {option.is_correct ? '✓ ' : ''}{option.text}
-                          </span>
-                                                ))}
+                                                {renderOptionsPreview(question)}
                                             </div>
                                         </div>
                                         <div className={styles.questionActions}>
