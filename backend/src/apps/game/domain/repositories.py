@@ -151,6 +151,77 @@ class IRoomStateRepository(ABC):
         pass
 
 
+class IGameStateRepository(ABC):
+    """
+    Интерфейс репозитория для хранения игрового состояния в Redis.
+    """
+
+    @abstractmethod
+    def save_game_state(self, session_id: int, state_data: dict) -> None:
+        """Сохранить общее состояние игровой сессии."""
+        pass
+
+    @abstractmethod
+    def get_game_state(self, session_id: int) -> Optional[dict]:
+        """Получить общее состояние сессии."""
+        pass
+
+    @abstractmethod
+    def update_session_status(self, session_id: int, status: str) -> None:
+        """Обновить статус сессии."""
+        pass
+
+    @abstractmethod
+    def set_current_round(self, session_id: int, round_number: int, question_data: dict) -> None:
+        """Установить текущий активный раунд."""
+        pass
+
+    @abstractmethod
+    def get_current_round(self, session_id: int) -> Optional[dict]:
+        """Получить данные текущего активного раунда."""
+        pass
+
+    @abstractmethod
+    def save_player_answer(self, session_id: int, round_number: int, user_id: int, answer_data: dict) -> bool:
+        """Сохранить ответ игрока"""
+        pass
+
+    @abstractmethod
+    def get_round_answers(self, session_id: int, round_number: int) -> dict:
+        """Получить все ответы игроков на раунд."""
+        pass
+
+    @abstractmethod
+    def is_player_answered(self, session_id: int, round_number: int, user_id: int) -> bool:
+        """Проверить, ответил ли игрок на вопрос."""
+        pass
+
+    @abstractmethod
+    def update_player_score(self, session_id: int, user_id: int, points_delta: int) -> int:
+        """Обновить очки игрока."""
+        pass
+
+    @abstractmethod
+    def get_player_scores(self, session_id: int) -> dict:
+        """Получить очки всех игроков."""
+        pass
+
+    @abstractmethod
+    def get_leaderboard(self, session_id: int) -> List[dict]:
+        """Получить таблицу лидеров."""
+        pass
+
+    @abstractmethod
+    def get_game_progress(self, session_id: int) -> dict:
+        """Получить прогресс игры."""
+        pass
+
+    @abstractmethod
+    def clear_session(self, session_id: int) -> None:
+        """Очистить всё состояние игровой сессии."""
+        pass
+
+
 class IPlayerAnswerRepository(ABC):
     @abstractmethod
     def get_by_id(self, answer_id: int):

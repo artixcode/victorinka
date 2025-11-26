@@ -5,6 +5,8 @@ from rest_framework.exceptions import ValidationError, PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from django.utils import timezone
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 from .models import GameSession, GameRound, PlayerAnswer, PlayerGameStats
 from .serializers import (
@@ -21,6 +23,17 @@ from apps.rooms.models import Room
 from apps.questions.models import Quiz
 
 
+@swagger_auto_schema(
+    method='post',
+    operation_description="Запустить игру в комнате. Только хост может запустить игру. Требуется указать quiz_id.",
+    request_body=GameStartSerializer,
+    responses={
+        201: GameSessionSerializer,
+        400: openapi.Response('Ошибка валидации'),
+        403: openapi.Response('Доступ запрещен - вы не хост комнаты'),
+        404: openapi.Response('Комната или викторина не найдена')
+    }
+)
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated, IsRoomHost])
 def start_game(request, room_id):
