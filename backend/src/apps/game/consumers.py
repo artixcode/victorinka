@@ -519,6 +519,19 @@ class GameRoomConsumer(AsyncWebsocketConsumer):
             'data': event['data']
         }))
 
+    async def new_question(self, event):
+        """Событие: следующий вопрос (после автозавершения раунда)."""
+        await self.send(text_data=json.dumps({
+            'type': 'new_question',
+            'session_id': event['session_id'],
+            'round_number': event['round_number'],
+            'question_id': event['question_id'],
+            'question_text': event['question_text'],
+            'options': event['options'],
+            'total_questions': event['total_questions'],
+            'timer_duration': event.get('timer_duration', 30)
+        }))
+
     async def answer_submitted(self, event):
         """Событие: игрок отправил ответ."""
         await self.send(text_data=json.dumps({
@@ -544,7 +557,8 @@ class GameRoomConsumer(AsyncWebsocketConsumer):
         """Событие: игра завершена."""
         await self.send(text_data=json.dumps({
             'type': 'game_finished',
-            'data': event['data']
+            'session_id': event.get('session_id'),
+            'message': event.get('message', 'Игра завершена')
         }))
 
     async def game_paused(self, event):
@@ -559,6 +573,54 @@ class GameRoomConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'game_resumed',
             'data': event['data']
+        }))
+
+    async def timer_update(self, event):
+        """Событие: обновление таймера раунда."""
+        await self.send(text_data=json.dumps({
+            'type': 'timer_update',
+            'session_id': event['session_id'],
+            'round_number': event['round_number'],
+            'remaining_seconds': event['remaining_seconds'],
+            'total_seconds': event['total_seconds']
+        }))
+
+    async def timer_paused(self, event):
+        """Событие: таймер остановлен на паузу."""
+        await self.send(text_data=json.dumps({
+            'type': 'timer_paused',
+            'session_id': event['session_id'],
+            'round_number': event['round_number'],
+            'paused_at_seconds': event['paused_at_seconds']
+        }))
+
+    async def timer_resumed(self, event):
+        """Событие: таймер возобновлен после паузы."""
+        await self.send(text_data=json.dumps({
+            'type': 'timer_resumed',
+            'session_id': event['session_id'],
+            'round_number': event['round_number'],
+            'remaining_seconds': event['remaining_seconds'],
+            'pause_duration': event.get('pause_duration', 0)
+        }))
+
+
+    async def round_ended(self, event):
+        """Событие: раунд завершен по таймеру."""
+        await self.send(text_data=json.dumps({
+            'type': 'round_ended',
+            'session_id': event['session_id'],
+            'round_number': event['round_number'],
+            'reason': event.get('reason', 'unknown'),
+            'message': event.get('message', 'Раунд завершен')
+        }))
+
+    async def system_message(self, event):
+        """Системное сообщение для комнаты."""
+        await self.send(text_data=json.dumps({
+            'type': 'system_message',
+            'message': event['message'],
+            'level': event.get('level', 'info')
         }))
 
     @database_sync_to_async
@@ -607,4 +669,3 @@ class GameRoomConsumer(AsyncWebsocketConsumer):
             )
         except Room.DoesNotExist:
             pass
-

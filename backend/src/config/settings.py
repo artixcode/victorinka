@@ -96,12 +96,18 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [(REDIS_HOST, REDIS_PORT)],
+            "hosts": [
+                {
+                    "address": f"redis://{REDIS_HOST}:{REDIS_PORT}/0",
+                }
+            ],
             "capacity": 1500,
-            "expiry": 10,
+            "expiry": 60,
+            "group_expiry": 86400,
         },
     },
 }
+
 
 DB_ENGINE = os.getenv("DB_ENGINE", "postgresql")
 

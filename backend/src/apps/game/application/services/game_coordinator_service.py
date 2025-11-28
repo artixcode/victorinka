@@ -6,9 +6,11 @@ import logging
 
 from apps.game.infrastructure.redis_game_state_repository import game_state_repository
 from apps.game.domain.services.game_session_service import GameSessionDomainService
-from apps.game.models import GameSession, GameRound, PlayerAnswer, PlayerGameStats
+from apps.game.domain.services.round_timer_service import RoundTimerService
 from apps.questions.models import Quiz, AnswerOption
 from apps.rooms.models import Room
+from apps.game.models import GameSession, GameRound, PlayerAnswer, PlayerGameStats
+from apps.game.tasks import start_round_timer
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +23,7 @@ class GameCoordinatorService:
     def __init__(self):
         self.game_state_repo = game_state_repository
         self.domain_service = GameSessionDomainService(game_state_repository)
+        self.timer_service = RoundTimerService(game_state_repository)
 
     def start_game_session(self, session_id: int, user_id: int) -> dict:
         """
@@ -104,35 +107,53 @@ class GameCoordinatorService:
             difficulty=question.difficulty
         )
 
+        timer_duration = self.timer_service.calculate_round_duration(
+            question_difficulty=question.difficulty,
+            custom_duration=next_round.time_limit
+        )
+
+        start_round_timer.delay(
+            session_id=session.id,
+            room_id=session.room_id,
+            round_number=next_round_number,
+            duration_seconds=timer_duration
+        )
+
+        self.timer_service.start_timer(
+            session_id=session.id,
+            round_number=next_round_number,
+            duration_seconds=timer_duration
+        )
+
+        logger.info(f"Запущен таймер для раунда {next_round_number}, длительность: {timer_duration}с")
+
         return {
             'question_revealed_event': question_revealed_event,
-            'round_id': next_round.id
+            'round_id': next_round.id,
+            'round_number': next_round_number,
+            'question_id': question.id,
+            'question_text': question.text,
+            'options': options,
+            'total_questions': session.quiz.questions.count(),
+            'timer_duration': timer_duration
         }
 
-    def submit_player_answer(
-        self,
-        session_id: int,
-        user_id: int,
-        username: str,
-        answer_option_id: int,
-        time_taken: float
-    ) -> dict:
+    def submit_answer(self, session_id: int, user_id: int, username: str, answer_option_id: int, time_taken: int = 0) -> dict:
         """
-        Принять ответ игрока через WebSocket.
+        Отправить ответ игрока.
         """
+        from apps.game.models import GameSession
+
         session = get_object_or_404(GameSession, id=session_id)
+        current_round_number = session.current_question_index
 
-        # Получаем текущий раунд
-        current_round_number = session.current_question_index + 1
-        current_round = session.rounds.filter(
-            round_number=current_round_number,
-            status=GameRound.Status.ACTIVE
-        ).first()
+        if current_round_number == 0:
+            raise ValueError("Активный раунд не найден")
 
+        current_round = session.rounds.filter(round_number=current_round_number).first()
         if not current_round:
             raise ValueError("Активный раунд не найден")
 
-        # Принимаем ответ через domain service
         answer_submitted_event = self.domain_service.submit_answer(
             session_id=session.id,
             room_id=session.room_id,
@@ -151,7 +172,7 @@ class GameCoordinatorService:
         is_correct = answer_option.is_correct
         points_earned = current_round.question.points if is_correct else 0
 
-        # Начисляем очки через domain service
+        # Начисляем очки
         answer_checked_event = self.domain_service.check_answer(
             session_id=session.id,
             room_id=session.room_id,
@@ -162,24 +183,19 @@ class GameCoordinatorService:
             points_earned=points_earned
         )
 
-        # Проверяем, все ли игроки ответили
         total_participants = session.room.participants.count()
         total_answers = self.game_state_repo.get_round_answers_count(session_id, current_round_number)
-
-        # Логика завершения раунда
         should_complete_round = False
 
         if total_answers >= total_participants:
-            # Все игроки ответили → завершаем раунд
+            # Все игроки ответили - завершаем раунд
             should_complete_round = True
             logger.info(f"[SUBMIT_ANSWER] Все игроки ответили ({total_answers}/{total_participants})")
         elif is_correct and total_answers == 1:
-            # Первый игрок ответил ПРАВИЛЬНО - завершаем раунд (победитель определен)
+            # Первый игрок ответил правильно - завершаем раунд
             should_complete_round = True
-            logger.info(f"[SUBMIT_ANSWER] Первый игрок ответил правильно → завершаем раунд")
+            logger.info(f"[SUBMIT_ANSWER] Первый игрок ответил правильно - завершаем раунд")
         else:
-            # Первый игрок ошибся ИЛИ второй игрок только что ответил
-            # ждем ответа других игроков (если они есть)
             should_complete_round = False
             logger.info(f"[SUBMIT_ANSWER] Ждем ответов ({total_answers}/{total_participants})")
 
@@ -199,8 +215,7 @@ class GameCoordinatorService:
         """
         logger.info(f"[COMPLETE_ROUND] Starting for session {session_id}")
         session = get_object_or_404(GameSession, id=session_id)
-
-        current_round_number = session.current_question_index + 1
+        current_round_number = session.current_question_index
         logger.info(f"[COMPLETE_ROUND] Current round number: {current_round_number}")
 
         current_round = session.rounds.filter(round_number=current_round_number).first()
@@ -211,19 +226,15 @@ class GameCoordinatorService:
 
         logger.info(f"[COMPLETE_ROUND] Round found: {current_round.id}, status: {current_round.status}")
 
-        # Получаем правильный ответ
         correct_option = current_round.question.options.filter(is_correct=True).first()
         if not correct_option:
             raise ValueError("Правильный ответ не найден для вопроса")
 
-        # Синхронизируем ответы из Redis в PostgreSQL
         self._sync_round_to_database(session, current_round)
 
-        # Завершаем раунд в PostgreSQL
         current_round.complete()
         logger.info(f"[COMPLETE_ROUND] Round {current_round_number} completed in DB")
 
-        # Генерируем событие через domain service
         round_completed_event = self.domain_service.complete_round(
             session_id=session.id,
             room_id=session.room_id,
@@ -240,7 +251,6 @@ class GameCoordinatorService:
         logger.info(f"[COMPLETE_ROUND] has_next={has_next} (current={current_round_number}, total={total_questions})")
 
         if has_next:
-            # Обновляем индекс в PostgreSQL
             session.current_question_index = current_round_number
             session.save(update_fields=['current_question_index'])
             logger.info(f"[COMPLETE_ROUND] Updated session index to {current_round_number}")
@@ -260,11 +270,10 @@ class GameCoordinatorService:
             'next_question_data': next_question_data
         }
 
-    def _sync_round_to_database(self, session: GameSession, current_round: GameRound) -> None:
+    def _sync_round_to_database(self, session, current_round) -> None:
         """
         Синхронизировать ответы из Redis в PostgreSQL.
         """
-        # Получаем ответы из Redis
         answers = self.game_state_repo.get_round_answers(session.id, current_round.round_number)
 
         # Создаем PlayerAnswer записи
@@ -280,7 +289,6 @@ class GameCoordinatorService:
             points_earned = answer_data.get('points_earned', 0)
             time_taken = answer_data.get('time_taken', 0.0)
 
-            # Создаем запись
             PlayerAnswer.objects.create(
                 round=current_round,
                 user_id=user_id,
@@ -290,7 +298,6 @@ class GameCoordinatorService:
                 time_taken=time_taken
             )
 
-            # Обновляем PlayerGameStats
             stats = PlayerGameStats.objects.filter(session=session, user_id=user_id).first()
             if stats:
                 stats.total_points += points_earned
@@ -300,28 +307,23 @@ class GameCoordinatorService:
 
         logger.info(f"Synced {len(answers)} answers to PostgreSQL for round {current_round.round_number}")
 
-    def _finish_game_session(self, session: GameSession) -> dict:
+    def _finish_game_session(self, session) -> dict:
         """
         Завершить игровую сессию.
         """
-        # Завершаем сессию в PostgreSQL
         session.finish()
 
-        # Обновляем комнату
         session.room.status = Room.Status.FINISHED
         session.room.save(update_fields=['status'])
 
-        # Финализируем статистику игроков
         for stats in session.player_stats.all():
             stats.finalize()
 
-        # Ранжируем игроков
         ranked_stats = session.player_stats.order_by('-total_points', 'completed_at')
         for rank, stats in enumerate(ranked_stats, start=1):
             stats.rank = rank
             stats.save(update_fields=['rank'])
 
-        # Создаем записи в историю
         from apps.users.models import GameHistory
         total_questions = session.quiz.questions.count()
 
@@ -337,20 +339,17 @@ class GameCoordinatorService:
                 final_rank=stats.rank
             )
 
-        # Обновляем User.total_points для всех игроков
         for stats in session.player_stats.all():
             stats.user.total_points += stats.total_points
             stats.user.save(update_fields=['total_points'])
             logger.info(f"Updated total_points for {stats.user.nickname}: +{stats.total_points}")
 
-        # Обновляем User.total_wins для победителя (место #1)
         winner = session.player_stats.filter(rank=1).first()
         if winner:
             winner.user.total_wins += 1
             winner.user.save(update_fields=['total_wins'])
             logger.info(f"Winner {winner.user.nickname} total_wins: {winner.user.total_wins}")
 
-        # Генерируем событие через domain service
         game_finished_event = self.domain_service.finish_game(
             session_id=session.id,
             room_id=session.room_id,
@@ -374,10 +373,8 @@ class GameCoordinatorService:
         if session.status != GameSession.Status.PLAYING:
             raise ValueError("Невозможно поставить на паузу игру в текущем статусе")
 
-        # Обновляем PostgreSQL
         session.pause()
 
-        # Генерируем событие
         pause_event = self.domain_service.pause_game(
             session_id=session.id,
             room_id=session.room_id,
@@ -390,6 +387,8 @@ class GameCoordinatorService:
 
     def resume_game_session(self, session_id: int, user_id: int) -> dict:
         """Продолжить игру после паузы через WebSocket."""
+        from apps.game.models import GameSession
+
         session = get_object_or_404(GameSession, id=session_id)
 
         if session.room.host_id != user_id:
@@ -398,10 +397,8 @@ class GameCoordinatorService:
         if session.status != GameSession.Status.PAUSED:
             raise ValueError("Невозможно продолжить игру в текущем статусе")
 
-        # Обновляем PostgreSQL
         session.resume()
 
-        # Генерируем событие
         resume_event = self.domain_service.resume_game(
             session_id=session.id,
             room_id=session.room_id,
@@ -441,6 +438,33 @@ class GameCoordinatorService:
             self._sync_round_to_database(session, round_obj)
 
         logger.info(f"Full sync to database completed for session {session_id}")
+
+    def auto_complete_round(self, session_id: int, round_number: int, reason: str = 'time_expired') -> dict:
+        """
+        Автоматически завершить раунд
+        """
+        from apps.game.models import GameSession
+
+        logger.info(f"Автозавершение раунда {round_number} для сессии {session_id}, причина: {reason}")
+
+        try:
+            session = get_object_or_404(GameSession, id=session_id)
+
+            session.current_question_index = round_number
+            session.save(update_fields=['current_question_index'])
+            logger.info(f"Set current round {round_number} for session {session_id}")
+
+            self.timer_service.stop_timer(session_id, round_number, reason=reason)
+            logger.info(f"Таймер остановлен для раунда {round_number}, причина: {reason}")
+
+            result = self.complete_current_round(session_id)
+
+            logger.info(f"Таймер раунда {round_number} завершен успешно")
+            return result
+
+        except Exception as e:
+            logger.error(f"Ошибка в таймере раунда {round_number}: {e}", exc_info=True)
+            raise
 
 game_coordinator_service = GameCoordinatorService()
 
