@@ -1,0 +1,23 @@
+[run]
+branch = True
+source =
+    apps
+    config
+omit =
+    */migrations/*
+    */tests/*
+    */admin.py
+    */apps.py
+    config/asgi.py
+    config/wsgi.py
+    manage.py
+
+[report]
+show_missing = True
+skip_covered = True
+exclude_lines =
+    pragma: no cover
+    if TYPE_CHECKING:
+    if settings.DEBUG
+    def __repr__
+    def __str__
