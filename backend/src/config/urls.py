@@ -43,7 +43,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("", core_views.home, name="home"),
     path("health/", core_views.health, name="health"),
-    path("ws-test/", core_views.websocket_test, name="websocket-test"),  # Тестовая страница WebSocket
 
     #swagger
     re_path(r"^swagger(?P<format>\.json|\.yaml)$", schema_view.without_ui(cache_timeout=0), name="schema-json"),
