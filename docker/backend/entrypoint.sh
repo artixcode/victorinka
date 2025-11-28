@@ -36,6 +36,11 @@ else:
     print('Superuser already exists')
 " || true
 
-echo "Starting Django development server..."
-python manage.py runserver 0.0.0.0:8000
+if [ $# -eq 0 ]; then
+    echo "Starting Daphne ASGI server (WebSocket support)..."
+    exec daphne -b 0.0.0.0 -p 8000 config.asgi:application
+else
+    echo "Executing command: $@"
+    exec "$@"
+fi
 

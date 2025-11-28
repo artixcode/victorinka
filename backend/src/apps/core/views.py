@@ -11,3 +11,7 @@ def health(request):
 def home(request):
     return render(request, "core/home.html", {"title": "Quiz Platform"})
 
+def websocket_test(request):
+    """Тестовая страница для проверки WebSocket игровой комнаты."""
+    return render(request, "websocket_test.html")
+
