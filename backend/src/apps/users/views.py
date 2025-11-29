@@ -8,6 +8,7 @@ from .serializers import (
     PasswordResetRequestSerializer, PasswordResetConfirmSerializer, PasswordResetTokenSerializer
 )
 from .models import QuizBookmark, GameHistory, PasswordResetToken
+from .tasks import send_welcome_email
 from django.contrib.auth import get_user_model
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -30,6 +31,10 @@ class RegisterView(views.APIView):
         s = RegisterSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         user = s.save()
+
+        # Отправка приветственного письма
+        send_welcome_email.delay(user.email, user.nickname)
+
         return Response(RegisterSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
@@ -290,11 +295,19 @@ class PasswordResetRequestView(views.APIView):
         # Создаем токен восстановления
         reset_token = PasswordResetToken.objects.create(user=user)
 
+        # Отправляем email с токеном
+        from apps.users.tasks import send_password_reset_email
+
+        send_password_reset_email.delay(
+            user_email=user.email,
+            token=reset_token.token,
+            user_nickname=user.nickname
+        )
+
         return Response({
-            'detail': 'Запрос на восстановление пароля создан',
-            'message': f'Токен восстановления создан для {email}. '
-                      'Администратор может найти токен в базе данных или админ-панели '
-                      'и передать его вам любым удобным способом.'
+            'detail': 'Письмо с токеном восстановления отправлено',
+            'message': f'Проверьте почту {email}. Если письмо не пришло, '
+                      'проверьте папку "Спам" или обратитесь к администратору.'
         }, status=status.HTTP_200_OK)
 
 
