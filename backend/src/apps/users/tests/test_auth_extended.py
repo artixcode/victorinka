@@ -35,13 +35,12 @@ def test_password_reset_confirm(api, user):
         "new_password": "StrongPass123!",
     })
 
-    # API обычно отвечает 400 на неверный токен
     assert res.status_code in (200, 400)
 
 @pytest.mark.django_db
 def test_password_reset_tokens(api, user):
     res = api.get("/api/auth/password-reset/tokens/")
-    assert res.status_code in (200, 403, 401)  # зависит от твоей реализации
+    assert res.status_code in (200, 403, 401)
 
 @pytest.mark.django_db
 def test_login_wrong_password(api, user):

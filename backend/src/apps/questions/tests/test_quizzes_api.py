@@ -47,7 +47,6 @@ def test_create_quiz_with_topics_tags_questions(auth_client, user):
 
     assert res.status_code == 201
 
-    # Проверяем ответ только по полям QuizCreateSerializer
     assert res.data["title"] == "География Европы"
     assert res.data["description"] == "Тест по географии"
     assert res.data["status"] == "draft"
