@@ -9,6 +9,10 @@ from .permissions import IsRoomHost
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
+from .application.services.create_room_service import CreateRoomService
+from .application.services.join_room_service import JoinRoomService
+from apps.rooms.domain.services.room_participant_service import RoomCapacityException
+
 
 class MyRoomsListView(generics.ListAPIView):
     serializer_class = RoomSerializer
@@ -20,25 +24,30 @@ class MyRoomsListView(generics.ListAPIView):
         return Room.objects.filter(participants__user=user).order_by("-created_at")
 
 
-class RoomCreateView(generics.CreateAPIView):
-    serializer_class = RoomCreateSerializer
+class RoomCreateView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    @swagger_auto_schema(request_body=RoomCreateSerializer, responses={201: RoomSerializer})
-    def post(self, request, *args, **kwargs):
-        return super().post(request, *args, **kwargs)
-
-    def perform_create(self, serializer):
-        room = serializer.save(host=self.request.user)
-        RoomParticipant.objects.get_or_create(
-            room=room, user=self.request.user, defaults={"role": RoomParticipant.Role.HOST}
-        )
-        self.room = room
-
-    def create(self, request, *args, **kwargs):
-        super_response = super().create(request, *args, **kwargs)
-        data = RoomSerializer(self.room, context={"request": request}).data
-        return Response(data, status=status.HTTP_201_CREATED)
+    @swagger_auto_schema(
+        request_body=RoomCreateSerializer, 
+        responses={201: RoomSerializer}
+    )
+    def post(self, request):
+        service = CreateRoomService()
+        
+        try:
+            result = service.execute(
+                host_id=request.user.id,
+                name=request.data.get('name', 'Новая комната')
+            )
+            
+            # Возвращаем результат
+            return Response(result, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response(
+                {"error": f"Ошибка создания комнаты: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class RoomDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -71,13 +80,36 @@ class RoomJoinView(APIView):
         responses={200: openapi.Response("OK")}
     )
     def post(self, request, pk: int):
-        room = get_object_or_404(Room, pk=pk)
-        code = (request.data.get("invite_code") or "").strip().upper()
-        if room.invite_code != code or room.status not in (Room.Status.DRAFT, Room.Status.OPEN):
-            return Response({"detail": "Неверный код или комната закрыта"}, status=400)
-
-        _, created = RoomParticipant.objects.get_or_create(room=room, user=request.user)
-        return Response({"detail": "Вы в комнате", "joined": created}, status=200)
+        service = JoinRoomService()
+        
+        try:
+            invite_code = request.data.get("invite_code", "").strip()
+            
+            result = service.execute(
+                user_id=request.user.id,
+                invite_code=invite_code
+            )
+            
+            return Response({
+                "detail": "Вы присоединились к комнате",
+                **result
+            }, status=status.HTTP_200_OK)
+            
+        except ValueError as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except RoomCapacityException as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {"detail": f"Ошибка присоединения: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class RoomLeaveView(APIView):
