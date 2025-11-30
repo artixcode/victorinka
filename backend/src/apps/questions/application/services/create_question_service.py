@@ -3,12 +3,17 @@ from django.db import transaction
 
 from apps.questions.domain.value_objects.question_text import QuestionText
 from apps.questions.domain.value_objects.difficulty import Difficulty
+from apps.questions.domain.repositories import QuestionRepository
+from apps.questions.infrastructure.orm_question_repository import question_repository
 
 
 class CreateQuestionService:
     """
     Application Service для создания вопроса.
     """
+
+    def __init__(self, repository: QuestionRepository = None):
+        self.repository = repository or question_repository
 
     @transaction.atomic
     def execute(
@@ -23,8 +28,6 @@ class CreateQuestionService:
         """
         Создать новый вопрос.
         """
-        from apps.questions.models import Question, AnswerOption
-
         # 1. Валидация текста через Value Object
         question_text_vo = QuestionText(text)
 
@@ -42,7 +45,7 @@ class CreateQuestionService:
         self._validate_options(options)
 
         # 5. Создание вопроса
-        question = Question.objects.create(
+        question = self.repository.create(
             author_id=author_id,
             text=question_text_vo.value,
             difficulty=difficulty_vo.level.value,
@@ -52,7 +55,7 @@ class CreateQuestionService:
 
         # 6. Создание вариантов ответа
         for idx, option_data in enumerate(options, start=1):
-            AnswerOption.objects.create(
+            self.repository.add_option(
                 question=question,
                 text=option_data['text'],
                 is_correct=option_data.get('is_correct', False),
