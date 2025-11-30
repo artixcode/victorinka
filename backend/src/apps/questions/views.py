@@ -166,8 +166,13 @@ class MyQuizzesListCreateView(generics.ListCreateAPIView):
             }
         }
     )
-    def post(self, request, *args, **kwargs):
-        return super().post(request, *args, **kwargs)
+    def create(self, request, *args, **kwargs):
+        serializer = QuizCreateSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        quiz = serializer.save()
+
+        output_serializer = QuizListSerializer(quiz, context={'request': request})
+        return Response(output_serializer.data, status=http_status.HTTP_201_CREATED)
 
 
 class MyQuizDetailView(generics.RetrieveUpdateDestroyAPIView):
