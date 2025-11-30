@@ -1,8 +1,9 @@
 from django.db import transaction
-from django.contrib.auth import get_user_model
 
 from apps.users.domain.value_objects.email import Email
 from apps.users.domain.value_objects.password import Password
+from apps.users.domain.repositories import UserRepository
+from apps.users.infrastructure.orm_user_repository import user_repository
 
 
 class RegistrationException(Exception):
@@ -15,6 +16,12 @@ class RegisterUserService:
     Application Service для регистрации пользователя.
     """
 
+    def __init__(self, repository: UserRepository = None):
+        """
+        Инициализация сервиса с репозиторием.
+        """
+        self.repository = repository or user_repository
+
     @transaction.atomic
     def execute(
         self,
@@ -25,8 +32,6 @@ class RegisterUserService:
         """
         Зарегистрировать нового пользователя.
         """
-        User = get_user_model()
-
         # 1. Валидация через Value Objects
         try:
             email_vo = Email(email)
@@ -39,7 +44,7 @@ class RegisterUserService:
             raise RegistrationException(f"Некорректный пароль: {e}")
 
         # 2. Проверка уникальности email
-        if User.objects.filter(email=email_vo.value).exists():
+        if self.repository.exists_by_email(email_vo.value):
             raise RegistrationException("Пользователь с таким email уже существует")
 
         # 3. Генерация никнейма если не указан
@@ -47,7 +52,7 @@ class RegisterUserService:
             nickname = self._generate_nickname(email_vo)
 
         # 4. Создание пользователя
-        user = User.objects.create_user(
+        user = self.repository.create(
             email=email_vo.value,
             password=password,
             nickname=nickname
