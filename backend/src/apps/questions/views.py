@@ -1,5 +1,6 @@
 from rest_framework import generics, permissions
 from rest_framework.response import Response
+from rest_framework import status as http_status
 from .models import Question, Quiz, Topic, Tag
 from .serializers import (
     QuestionSerializer,
@@ -11,6 +12,9 @@ from .serializers import (
 )
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+
+from .application.services.create_question_service import CreateQuestionService
+from .application.services.publish_quiz_service import PublishQuizService
 
 
 class IsAuthor(permissions.BasePermission):
@@ -76,7 +80,31 @@ class MyQuestionsListCreateView(generics.ListCreateAPIView):
         )
     )
     def post(self, request, *args, **kwargs):
-        return super().post(request, *args, **kwargs)
+        service = CreateQuestionService()
+        
+        try:
+            question = service.execute(
+                author_id=request.user.id,
+                text=request.data.get('text'),
+                difficulty=request.data.get('difficulty'),
+                options=request.data.get('options', []),
+                explanation=request.data.get('explanation', ''),
+                points=request.data.get('points')
+            )
+            
+            serializer = QuestionSerializer(question)
+            return Response(serializer.data, status=http_status.HTTP_201_CREATED)
+            
+        except ValueError as e:
+            return Response(
+                {"error": str(e)},
+                status=http_status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Ошибка создания вопроса: {str(e)}"},
+                status=http_status.HTTP_400_BAD_REQUEST
+            )
 
 
 class MyQuestionDetailView(generics.RetrieveUpdateDestroyAPIView):

@@ -15,6 +15,10 @@ from drf_yasg import openapi
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 from django.shortcuts import get_object_or_404
 
+from .application.services.register_user_service import RegisterUserService, RegistrationException
+from .application.services.login_user_service import LoginUserService
+from apps.users.domain.services.authentication_service import AuthenticationException
+
 User = get_user_model()
 
 
@@ -28,14 +32,30 @@ class RegisterView(views.APIView):
         examples={"application/json": {"email": "player@mail.com", "password": "Qwerty123", "nickname": "PlayerOne"}}
     )
     def post(self, request):
-        s = RegisterSerializer(data=request.data)
-        s.is_valid(raise_exception=True)
-        user = s.save()
-
-        # Отправка приветственного письма
-        send_welcome_email.delay(user.email, user.nickname)
-
-        return Response(RegisterSerializer(user).data, status=status.HTTP_201_CREATED)
+        service = RegisterUserService()
+        
+        try:
+            user = service.execute(
+                email=request.data.get('email'),
+                password=request.data.get('password'),
+                nickname=request.data.get('nickname')
+            )
+            
+            # Отправка приветственного письма
+            send_welcome_email.delay(user.email, user.nickname)
+            
+            return Response(RegisterSerializer(user).data, status=status.HTTP_201_CREATED)
+            
+        except RegistrationException as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Ошибка регистрации: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class LoginView(views.APIView):
@@ -47,14 +67,29 @@ class LoginView(views.APIView):
         responses={200: openapi.Response("OK", LoginSerializer)}
     )
     def post(self, request):
-        s = LoginSerializer(data=request.data)
-        s.is_valid(raise_exception=True)
-        user = s.validated_data["user"]
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
-        })
+        service = LoginUserService()
+        
+        try:
+            result = service.execute(
+                email=request.data.get('email'),
+                password=request.data.get('password')
+            )
+            
+            return Response({
+                "access": result['access'],
+                "refresh": result['refresh'],
+            })
+            
+        except AuthenticationException as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Ошибка входа: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class MeView(views.APIView):
