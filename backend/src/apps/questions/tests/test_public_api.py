@@ -58,7 +58,6 @@ def test_public_quiz_detail(api, user):
         visibility="public",
     )
 
-    # создаём 3 вопроса
     q1 = baker.make(Question)
     q1.in_quizzes.add(quiz)
 

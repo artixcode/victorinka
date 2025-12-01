@@ -33,3 +33,4 @@ def auth_client(api, user):
 
     api.credentials(HTTP_AUTHORIZATION=f"Bearer {res.data['access']}")
     return api
+

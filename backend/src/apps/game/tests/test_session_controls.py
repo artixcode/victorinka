@@ -18,7 +18,6 @@ def create_quiz_with_one_question(user):
 
     question = baker.make(Question, author=user, points=10)
 
-    # ВАЖНО: создаём варианты руками, чтобы не нарушать unique (question, order)
     opt1 = AnswerOption.objects.create(
         question=question,
         text="Correct",
@@ -41,21 +40,17 @@ def create_quiz_with_one_question(user):
 def test_start_session_success(auth_client, user):
     """Хост успешно запускает игровую сессию"""
 
-    # Комната и участник (хост)
     room = baker.make(Room, host=user, status=Room.Status.OPEN)
     RoomParticipant.objects.create(room=room, user=user)
 
-    # Квиз с одним вопросом
     quiz, question, _ = create_quiz_with_one_question(user)
 
-    # Сессия в статусе WAITING
     session = GameSession.objects.create(
         room=room,
         quiz=quiz,
         status=GameSession.Status.WAITING,
     )
 
-    # Раунд в статусе WAITING
     round1 = GameRound.objects.create(
         session=session,
         question=question,
@@ -83,7 +78,6 @@ def test_start_session_only_host(auth_client, user):
     room_host = baker.make("users.User")
     room = baker.make(Room, host=room_host, status=Room.Status.OPEN)
 
-    # Пользователь — участник, но не хост
     RoomParticipant.objects.create(room=room, user=user)
 
     quiz, question, _ = create_quiz_with_one_question(room_host)

@@ -33,7 +33,6 @@ def create_quiz_with_questions(author, count=2):
         AnswerOption.objects.create(question=q, text="Wrong", is_correct=False, order=2)
         questions.append(q)
 
-    # Привязываем вопросы к quiz
     for idx, q in enumerate(questions, start=1):
         QuizQuestion.objects.create(
             quiz=quiz,
@@ -51,7 +50,6 @@ def create_room_with_participants(host, participants=None, status=Room.Status.OP
     """
     room = baker.make(Room, host=host, status=status)
 
-    # Добавляем хоста как участника
     RoomParticipant.objects.create(room=room, user=host, role=RoomParticipant.Role.HOST)
 
     if participants:
@@ -71,13 +69,10 @@ def test_start_game_success(auth_client, user):
     """
     Проверяем успешный запуск игры.
     """
-    # Создаём участников
     p2 = baker.make("users.User")
 
-    # Создаём комнату
     room = create_room_with_participants(host=user, participants=[p2])
 
-    # Создаём quiz
     quiz, questions = create_quiz_with_questions(author=user, count=2)
 
     url = f"/api/game/rooms/{room.id}/start/"
@@ -124,7 +119,6 @@ def test_submit_answer_success(auth_client, user):
     room = create_room_with_participants(host=user, participants=[p2])
     quiz, questions = create_quiz_with_questions(author=user, count=1)
 
-    # Создаём сессию вручную (чтобы не дублировать start_game)
     session = baker.make(GameSession, room=room, quiz=quiz, status=GameSession.Status.PLAYING)
     round1 = baker.make(
         GameRound,
@@ -151,7 +145,6 @@ def test_submit_answer_twice(auth_client, user):
     Повторная отправка ответа должна выдавать ошибку
     при активной игре (уже ответили).
     """
-    # Второй игрок
     p2 = baker.make("users.User")
 
     room = create_room_with_participants(host=user, participants=[p2])
@@ -169,16 +162,13 @@ def test_submit_answer_twice(auth_client, user):
 
     opt = questions[0].options.first()
 
-    # Важно! Создаём статы вручную, иначе participants = 1
     baker.make("game.PlayerGameStats", session=session, user=user)
     baker.make("game.PlayerGameStats", session=session, user=p2)
 
     url = f"/api/game/sessions/{session.id}/answer/"
 
-    # Первый ответ
     auth_client.post(url, {"selected_option": opt.id}, format="json")
 
-    # Второй — должно быть уже ответили
     res2 = auth_client.post(url, {"selected_option": opt.id}, format="json")
 
     assert res2.status_code == 400
