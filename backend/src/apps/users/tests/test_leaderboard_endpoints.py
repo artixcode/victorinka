@@ -472,3 +472,5 @@ def test_user_stats_detail_for_other_user_hides_email(auth_client, user):
     assert data["user_id"] == other.id
     # мы залогинены как fixture user, а не как other, и не staff → email скрыт
     assert data["email"] is None
+
+
