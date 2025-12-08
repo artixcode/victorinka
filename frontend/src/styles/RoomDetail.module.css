@@ -1,0 +1,378 @@
+.pageContainer {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #8A2BE2 0%, #9B30FF 100%);
+  color: white;
+}
+
+.main {
+  flex: 1;
+  padding: 2rem 1rem;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.headerContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  padding: 1.5rem 2rem;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.titleWrapper {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.roomTitle {
+  margin: 0;
+  font-size: 2rem;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.backButton {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.8rem 1.5rem;
+  border-radius: 50px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  text-decoration: none;
+  display: inline-block;
+  backdrop-filter: blur(5px);
+}
+
+.backButton:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  border-color: white;
+}
+
+.roomCard {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 2.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.statusBadge {
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: inline-block;
+  backdrop-filter: blur(5px);
+}
+
+.statusDraft {
+  background: rgba(240, 240, 240, 0.3);
+  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.statusOpen {
+  background: rgba(46, 204, 113, 0.3);
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.statusInProgress {
+  background: rgba(243, 156, 18, 0.3);
+  color: #f39c12;
+  border: 1px solid rgba(243, 156, 18, 0.3);
+}
+
+.statusFinished {
+  background: rgba(231, 76, 60, 0.3);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.hostBadge {
+  background: rgba(52, 152, 219, 0.3);
+  color: #3498db;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+.roomInfo {
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 2rem;
+  font-size: 1rem;
+}
+
+.roomInfo p {
+  margin: 0.8rem 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.infoLabel {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  min-width: 100px;
+}
+
+.inviteCode {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 0.8rem;
+  border-radius: 10px;
+  font-family: monospace;
+  font-weight: 600;
+  color: #FFD700;
+  border: 1px dashed rgba(255, 255, 255, 0.3);
+}
+
+.manageSection {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.manageSection h3 {
+  margin-top: 0;
+  color: white;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+}
+
+.controlButtons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.controlButton {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.8rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  backdrop-filter: blur(5px);
+  flex: 1;
+  min-width: 120px;
+}
+
+.controlButton:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  border-color: white;
+}
+
+.controlButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.controlOpen {
+  background: rgba(46, 204, 113, 0.3);
+  border-color: rgba(46, 204, 113, 0.5);
+}
+
+.controlStart {
+  background: rgba(243, 156, 18, 0.3);
+  border-color: rgba(243, 156, 18, 0.5);
+}
+
+.controlFinish {
+  background: rgba(231, 76, 60, 0.3);
+  border-color: rgba(231, 76, 60, 0.5);
+}
+
+.controlReopen {
+  background: rgba(52, 152, 219, 0.3);
+  border-color: rgba(52, 152, 219, 0.5);
+}
+
+.participantsSection {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.participantsSection h3 {
+  margin-top: 0;
+  color: white;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+}
+
+.participantsList {
+  margin-top: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.participantItem {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.3s ease;
+}
+
+.participantItem:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.participantItem:last-child {
+  border-bottom: none;
+}
+
+.actionsSection {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.actionsSection h3 {
+  margin-top: 0;
+  color: white;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+}
+
+.roomActions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.actionButton {
+  flex: 1;
+  padding: 0.8rem;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  text-decoration: none;
+  font-size: 0.95rem;
+  backdrop-filter: blur(5px);
+}
+
+.leaveButton {
+  background: rgba(255, 107, 107, 0.8);
+  color: white;
+  border: 1px solid rgba(255, 107, 107, 0.5);
+}
+
+.leaveButton:hover {
+  background: rgba(255, 107, 107, 1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+}
+
+.deleteButton {
+  background: rgba(231, 76, 60, 0.8);
+  color: white;
+  border: 1px solid rgba(231, 76, 60, 0.5);
+}
+
+.deleteButton:hover {
+  background: rgba(231, 76, 60, 1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+}
+
+.copyButton {
+  background: rgba(52, 152, 219, 0.8);
+  color: white;
+  border: 1px solid rgba(52, 152, 219, 0.5);
+}
+
+.copyButton:hover {
+  background: rgba(52, 152, 219, 1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+.loading {
+  text-align: center;
+  padding: 5rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.2rem;
+}
+
+.error {
+  background: rgba(255, 235, 238, 0.2);
+  color: #ffcdd2;
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  border-left: 4px solid #ff5252;
+  backdrop-filter: blur(5px);
+}
+
+.errorLink {
+  margin-left: 10px;
+  color: #FFD700;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.errorLink:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .roomActions {
+    flex-direction: column;
+  }
+
+  .controlButtons {
+    flex-direction: column;
+  }
+
+  .controlButton {
+    width: 100%;
+  }
+
+  .headerContainer {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .titleWrapper {
+    justify-content: center;
+  }
+
+  .roomInfo p {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+  }
+
+  .infoLabel {
+    min-width: auto;
+  }
+}
