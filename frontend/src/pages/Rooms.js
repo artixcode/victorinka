@@ -147,8 +147,19 @@ const Rooms = () => {
     };
     return classMap[status] || styles.statusDraft;
   };
+  
+  const getUserId = () => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (!userStr) return 0;
+      const user = JSON.parse(userStr);
+      return user.id || 0;
+    } catch {
+      return 0;
+    }
+  };
 
-  const userId = parseInt(localStorage.getItem('userId') || '0');
+  const userId = getUserId();
 
   const renderRooms = () => {
     if (!Array.isArray(rooms)) {

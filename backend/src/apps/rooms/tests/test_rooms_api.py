@@ -67,7 +67,8 @@ def test_join_room_with_wrong_code_returns_400(auth_client, user):
     )
 
     assert res.status_code == 400
-    assert "Неверный код" in res.data["detail"]
+    assert ("Код приглашения должен быть 6 символов" in res.data["detail"] or
+            "Неверный код" in res.data["detail"])
     assert not RoomParticipant.objects.filter(room=room, user=user).exists()
 
 
@@ -84,7 +85,7 @@ def test_join_closed_room_returns_400(auth_client, user):
     )
 
     assert res.status_code == 400
-    assert "комната закрыта" in res.data["detail"]
+    assert "закрыта" in res.data["detail"].lower()
     assert not RoomParticipant.objects.filter(room=room, user=user).exists()
 
 

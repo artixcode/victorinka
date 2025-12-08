@@ -41,13 +41,15 @@ class CreateRoomService:
             role=RoomParticipant.Role.HOST
         )
 
+        room.refresh_from_db()
+
         return {
             "id": room.id,
             "name": room.name,
             "invite_code": room.invite_code,
             "status": room.status,
             "host_id": room.host_id,
-            "participants_count": 1
+            "participants_count": room.participants.count()
         }
 
     def _generate_unique_code(self, max_attempts: int = 10) -> InviteCode:

@@ -23,7 +23,7 @@ const RoomDetail = () => {
       setLoading(true);
       const response = await roomsAPI.getRoom(id);
       setRoom(response.data);
-      loadParticipants();
+      setParticipants(response.data.participants || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -31,14 +31,6 @@ const RoomDetail = () => {
     }
   };
 
-  const loadParticipants = async () => {
-    try {
-      const response = await roomsAPI.getRoom(id);
-      setParticipants(response.data.participants || []);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   const handleChangeStatus = async (newStatus) => {
     if (!window.confirm('Изменить статус?')) return;
@@ -142,7 +134,18 @@ const RoomDetail = () => {
     );
   }
 
-  const userId = parseInt(localStorage.getItem('userId') || '0');
+  const getUserId = () => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (!userStr) return 0;
+      const user = JSON.parse(userStr);
+      return user.id || 0;
+    } catch {
+      return 0;
+    }
+  };
+
+  const userId = getUserId();
   const isHost = room.host_id === userId;
 
   return (

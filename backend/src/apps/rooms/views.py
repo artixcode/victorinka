@@ -20,8 +20,9 @@ class MyRoomsListView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        room_ids = RoomParticipant.objects.filter(user=user).values_list("room_id", flat=True)
-        return Room.objects.filter(participants__user=user).order_by("-created_at")
+        return Room.objects.filter(
+            participants__user=user
+        ).prefetch_related('participants').order_by("-created_at")
 
 
 class RoomCreateView(APIView):
@@ -51,9 +52,11 @@ class RoomCreateView(APIView):
 
 
 class RoomDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Room.objects.all()
     serializer_class = RoomSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Room.objects.prefetch_related('participants').all()
 
     def get_permissions(self):
         if self.request.method in ("PATCH", "DELETE"):
@@ -92,6 +95,7 @@ class RoomJoinView(APIView):
             
             return Response({
                 "detail": "Вы присоединились к комнате",
+                "joined": True,
                 **result
             }, status=status.HTTP_200_OK)
             
@@ -101,8 +105,18 @@ class RoomJoinView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         except RoomCapacityException as e:
+            error_message = str(e)
+            if "уже в этой комнате" in error_message.lower():
+                room = get_object_or_404(Room, pk=pk)
+                return Response({
+                    "detail": error_message,
+                    "joined": False,
+                    "room_id": room.id,
+                    "room_name": room.name
+                }, status=status.HTTP_200_OK)
+
             return Response(
-                {"detail": str(e)},
+                {"detail": error_message},
                 status=status.HTTP_400_BAD_REQUEST
             )
         except Exception as e:
@@ -128,3 +142,41 @@ class RoomLeaveView(APIView):
             return Response({"detail": "Хост не может покинуть комнату. Передайте хостинг или удалите комнату."}, status=400)
         RoomParticipant.objects.filter(room=room, user=request.user).delete()
         return Response({"detail": "Вы вышли из комнаты"}, status=200)
+
+
+class RoomFindView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter(
+                'invite_code',
+                openapi.IN_QUERY,
+                description="Код приглашения комнаты",
+                type=openapi.TYPE_STRING,
+                required=True
+            )
+        ],
+        responses={
+            200: RoomSerializer,
+            404: "Комната не найдена"
+        }
+    )
+    def get(self, request):
+        invite_code = request.query_params.get('invite_code', '').strip().upper()
+
+        if not invite_code:
+            return Response(
+                {"detail": "Код приглашения не указан"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            room = Room.objects.prefetch_related('participants').get(invite_code=invite_code)
+            serializer = RoomSerializer(room)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Room.DoesNotExist:
+            return Response(
+                {"detail": "Комната с таким кодом не найдена"},
+                status=status.HTTP_404_NOT_FOUND
+            )
