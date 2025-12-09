@@ -15,7 +15,9 @@ const roomsAPI = {
 
   leaveRoom: (roomId) => api.post(`/rooms/${roomId}/leave/`),
 
-  startGame: (roomId) => api.post(`/game/rooms/${roomId}/start/`),
+  startGame: (roomId, data) => api.post(`/game/rooms/${roomId}/start/`, data),
+
+  getActiveSession: (roomId) => api.get(`/game/rooms/${roomId}/active-session/`),
 
   findRoomByCode: (inviteCode) => api.get(`/rooms/find/?invite_code=${inviteCode}`),
 

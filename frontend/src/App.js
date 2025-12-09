@@ -13,6 +13,7 @@ import CreateQuiz from './pages/CreateQuiz';
 import MyQuizzes from './pages/MyQuizzes';
 import QuizView from './pages/QuizView';
 import EditQuiz from './pages/EditQuiz';
+import GameRoom from './pages/GameRoom';
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
           <Route path="/my-quizzes" element={<MyQuizzes />} />
           <Route path="/quiz/:id" element={<QuizView />} />
           <Route path="/edit-quiz/:id" element={<EditQuiz />} />
+          <Route path="/game/:sessionId" element={<GameRoom />} />
         </Routes>
       </div>
     </Router>

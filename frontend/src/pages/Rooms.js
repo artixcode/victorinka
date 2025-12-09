@@ -25,28 +25,21 @@ const Rooms = () => {
       setLoading(true);
       setError(null);
       const response = await roomsAPI.getMyRooms();
-      let roomsData = [];
 
+      let roomsData = [];
       if (Array.isArray(response.data)) {
         roomsData = response.data;
-      } else if (response.data && Array.isArray(response.data.results)) {
-        roomsData = response.data.results;
-      } else if (response.data && Array.isArray(response.data.rooms)) {
-        roomsData = response.data.rooms;
       } else if (response.data && typeof response.data === 'object') {
-        if (response.data.id) {
+        if (response.data.results && Array.isArray(response.data.results)) {
+          roomsData = response.data.results;
+        } else if (response.data.rooms && Array.isArray(response.data.rooms)) {
+          roomsData = response.data.rooms;
+        } else if (response.data.id) {
           roomsData = [response.data];
-        } else {
-          roomsData = [];
         }
-      } else if (response.data === null || response.data === undefined) {
-        roomsData = [];
-      } else {
-        roomsData = [];
       }
 
       setRooms(roomsData);
-
     } catch (err) {
       setError(err.message || 'Не удалось загрузить комнаты');
       setRooms([]);
@@ -69,7 +62,6 @@ const Rooms = () => {
       setRooms(prevRooms => [response.data, ...prevRooms]);
       setNewRoomName('');
       setShowCreateModal(false);
-
     } catch (err) {
       setError(err.response?.data?.detail || err.message || 'Не удалось создать комнату');
     } finally {
@@ -96,7 +88,6 @@ const Rooms = () => {
       } else {
         setJoinError('Комната не найдена');
       }
-
     } catch (err) {
       setJoinError(err.response?.data?.detail || err.message || 'Не удалось присоединиться');
     } finally {
