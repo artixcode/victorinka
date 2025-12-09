@@ -313,7 +313,7 @@ class GameRoomConsumer(AsyncWebsocketConsumer):
                 return
 
             # Отправляем ответ через coordinator
-            result = await sync_to_async(game_coordinator_service.submit_player_answer)(
+            result = await sync_to_async(game_coordinator_service.submit_answer)(
                 session_id=session.id,
                 user_id=self.user_id,
                 username=self.username,
@@ -465,7 +465,6 @@ class GameRoomConsumer(AsyncWebsocketConsumer):
                 await self._broadcast_game_event('round_completed', result['round_completed_event'])
                 logger.info(f"[COMPLETE_ROUND] Broadcasted round_completed event")
 
-            # Ждем 3 секунды перед следующим вопросом
             logger.info(f"[COMPLETE_ROUND] Waiting 3 seconds before next question...")
             await asyncio.sleep(3)
 
@@ -479,7 +478,16 @@ class GameRoomConsumer(AsyncWebsocketConsumer):
                 else:
                     logger.warning(f"[COMPLETE_ROUND] next_question_data exists but no event")
             else:
-                logger.info(f"[COMPLETE_ROUND] No more questions, game should be finished")
+                logger.info(f"[COMPLETE_ROUND] No more questions, broadcasting game_finished event")
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'game_finished',
+                        'session_id': session_id,
+                        'message': 'Игра завершена! Спасибо за участие!'
+                    }
+                )
+                logger.info(f"[COMPLETE_ROUND] game_finished event broadcasted!")
 
         except Exception as e:
             logger.exception(f"[COMPLETE_ROUND] Error: {str(e)}")

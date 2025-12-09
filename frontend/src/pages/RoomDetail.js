@@ -24,22 +24,36 @@ const RoomDetail = () => {
     const [loadingPublicQuizzes, setLoadingPublicQuizzes] = useState(false);
     const [error, setError] = useState(null);
 
-    const loadRoom = async () => {
+    const loadRoom = async (showLoading = true) => {
         try {
-            setLoading(true);
+            if (showLoading) setLoading(true);
             setError(null);
             const response = await roomsAPI.getRoom(id);
             setRoom(response.data);
             setParticipants(response.data.participants || []);
+
+            if (response.data.status === 'in_progress' || response.data.current_session_id) {
+                const sessionId = response.data.current_session_id || id;
+                localStorage.setItem('gameRoomId', id);
+                localStorage.setItem('gameRoomName', response.data.name || 'Комната');
+                localStorage.setItem('gameSessionId', String(sessionId));
+                navigate(`/game/${sessionId}`);
+                return;
+            }
         } catch (err) {
             setError(err.response?.data?.detail || err.message || 'Ошибка загрузки комнаты');
         } finally {
-            setLoading(false);
+            if (showLoading) setLoading(false);
         }
     };
 
     useEffect(() => {
-        loadRoom();
+        loadRoom(true);
+        const interval = setInterval(() => {
+            loadRoom(false);
+        }, 2000);
+
+        return () => clearInterval(interval);
     }, [id]);
 
     const loadMyQuizzes = async () => {

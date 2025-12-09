@@ -74,6 +74,7 @@ const GameRoom = () => {
       socket.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          console.log('WebSocket received:', data.type, data);
 
           switch(data.type) {
             case 'room_state':
@@ -82,9 +83,27 @@ const GameRoom = () => {
               if (data.data.recent_messages) {
                 setChatMessages(data.data.recent_messages);
               }
+              if (data.data.game_session) {
+                const session = data.data.game_session;
+                if (session.status === 'playing') {
+                  setGameStatus('playing');
+                  if (data.data.current_question) {
+                    setCurrentQuestion(data.data.current_question);
+                    setTimer({
+                      remaining: data.data.current_question.time_limit || 30,
+                      total: data.data.current_question.time_limit || 30
+                    });
+                  }
+                } else if (session.status === 'waiting') {
+                  setGameStatus('waiting');
+                } else if (session.status === 'finished') {
+                  setGameStatus('finished');
+                }
+              }
               break;
 
             case 'player_joined':
+              console.log('Player joined event:', data.data);
               setPlayers(prev => {
                 const exists = prev.some(p => p.user_id === data.data.user_id);
                 if (!exists) {
@@ -96,10 +115,21 @@ const GameRoom = () => {
                 }
                 return prev;
               });
+
+              setChatMessages(prev => [...prev, {
+                username: 'Система',
+                message: `${data.data.username} присоединился к комнате`,
+                timestamp: new Date().toISOString()
+              }]);
               break;
 
             case 'player_left':
               setPlayers(prev => prev.filter(p => p.user_id !== data.data.user_id));
+              setChatMessages(prev => [...prev, {
+                username: 'Система',
+                message: `${data.data.username} покинул комнату`,
+                timestamp: new Date().toISOString()
+              }]);
               break;
 
             case 'chat_message':
@@ -113,19 +143,35 @@ const GameRoom = () => {
 
             case 'game_started':
               setGameStatus('playing');
+              // Данные могут быть в data.data или напрямую в data
+              const gameData = data.data || data;
+              setChatMessages(prev => [...prev, {
+                username: 'Система',
+                message: `🎮 Игра началась! Викторина: ${gameData.quiz_title || 'Неизвестно'}`,
+                timestamp: new Date().toISOString()
+              }]);
               break;
 
             case 'question_revealed':
-              setCurrentQuestion(data.data);
+              // Данные могут быть в data.data или напрямую в data
+              const questionData = data.data || data;
+              setCurrentQuestion({
+                round_number: questionData.round_number,
+                question_id: questionData.question_id,
+                question_text: questionData.question_text,
+                options: questionData.options,
+                time_limit: questionData.time_limit || 30,
+                points: questionData.points,
+                difficulty: questionData.difficulty
+              });
               setGameStatus('playing');
               setAnswered(false);
               setQuestionStartTime(Date.now());
-              if (data.data.time_limit) {
-                setTimer({
-                  remaining: data.data.time_limit,
-                  total: data.data.time_limit
-                });
-              }
+              const timeLimit = questionData.time_limit || 30;
+              setTimer({
+                remaining: timeLimit,
+                total: timeLimit
+              });
               break;
 
             case 'timer_update':
@@ -135,12 +181,46 @@ const GameRoom = () => {
               });
               break;
 
+            case 'new_question':
+              setCurrentQuestion({
+                round_number: data.round_number,
+                question_id: data.question_id,
+                question_text: data.question_text,
+                options: data.options,
+                total_questions: data.total_questions,
+                time_limit: data.timer_duration || 30
+              });
+              setGameStatus('playing');
+              setAnswered(false);
+              setQuestionStartTime(Date.now());
+              setTimer({
+                remaining: data.timer_duration || 30,
+                total: data.timer_duration || 30
+              });
+              break;
+
+            case 'round_ended':
+              setChatMessages(prev => [...prev, {
+                username: 'Система',
+                message: data.message || 'Время вышло!',
+                timestamp: new Date().toISOString()
+              }]);
+              break;
+
             case 'answer_submitted':
               break;
 
             case 'answer_checked':
-              if (data.data.user_id === userId) {
-                alert(data.data.is_correct ? '✅ Правильно!' : '❌ Неправильно');
+              const answerData = data.data || data;
+              if (answerData.user_id === userId) {
+                const resultMsg = answerData.is_correct
+                  ? `✅ Правильно! +${answerData.points_earned || 0} очков`
+                  : '❌ Неправильно';
+                setChatMessages(prev => [...prev, {
+                  username: 'Система',
+                  message: resultMsg,
+                  timestamp: new Date().toISOString()
+                }]);
               }
               break;
 
@@ -148,11 +228,27 @@ const GameRoom = () => {
               setCurrentQuestion(null);
               setAnswered(false);
               setQuestionStartTime(null);
+              const roundData = data.data || data;
+              setChatMessages(prev => [...prev, {
+                username: 'Система',
+                message: `Раунд ${roundData.round_number || ''} завершен! Следующий вопрос...`,
+                timestamp: new Date().toISOString()
+              }]);
               break;
 
             case 'game_finished':
               setGameStatus('finished');
-              alert('Игра завершена!');
+              setCurrentQuestion(null);
+              setTimer({ remaining: 0, total: 30 });
+              setChatMessages(prev => [...prev, {
+                username: 'Система',
+                message: data.message || '🏆 Игра завершена! Спасибо за участие!',
+                timestamp: new Date().toISOString()
+              }]);
+
+              setTimeout(() => {
+                alert('Игра завершена! Посмотрите результаты в лидерборде.');
+              }, 500);
               break;
 
             case 'game_paused':
@@ -536,7 +632,7 @@ const GameRoom = () => {
               <div style={{ textAlign: 'center', padding: '40px 20px' }}>
                 <h2 style={{ color: '#666' }}>
                   {gameStatus === 'waiting' ? 'Ожидание начала игры...' :
-                   gameStatus === 'finished' ? 'Игра завершена!' :
+                   gameStatus === 'finished' ? '🏆 Игра завершена!' :
                    'Между раундами...'}
                 </h2>
                 {gameStatus === 'waiting' && isHost && (
@@ -544,6 +640,43 @@ const GameRoom = () => {
                 )}
                 {gameStatus === 'waiting' && !isHost && (
                   <p>Ведущий скоро начнет игру...</p>
+                )}
+                {gameStatus === 'finished' && (
+                  <div style={{ marginTop: '20px' }}>
+                    <p style={{ marginBottom: '20px', color: '#666' }}>
+                      Спасибо за участие! Посмотрите результаты в лидерборде.
+                    </p>
+                    <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => navigate(`/room/${roomId}`)}
+                        style={{
+                          padding: '12px 24px',
+                          background: '#667eea',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '16px'
+                        }}
+                      >
+                        🚪 Вернуться к комнате
+                      </button>
+                      <button
+                        onClick={() => navigate('/leaderboard')}
+                        style={{
+                          padding: '12px 24px',
+                          background: '#4caf50',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '16px'
+                        }}
+                      >
+                        🏆 Лидерборд
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             )}

@@ -21,6 +21,7 @@ class PlayerJoinedRoom(RoomEvent):
     user_id: int = 0
     username: str = ""
     channel_name: str = ""
+    is_host: bool = False
 
 
 @dataclass

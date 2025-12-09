@@ -90,6 +90,10 @@ class GameCoordinatorService:
         if next_round.status == GameRound.Status.WAITING:
             next_round.start()
 
+        session.current_question_index = next_round_number
+        session.save(update_fields=['current_question_index'])
+        logger.info(f"Set current round {next_round_number} for session {session_id}")
+
         # Получаем данные вопроса
         question = next_round.question
         options = list(question.options.values('id', 'text', 'order'))
@@ -251,11 +255,6 @@ class GameCoordinatorService:
         logger.info(f"[COMPLETE_ROUND] has_next={has_next} (current={current_round_number}, total={total_questions})")
 
         if has_next:
-            session.current_question_index = current_round_number
-            session.save(update_fields=['current_question_index'])
-            logger.info(f"[COMPLETE_ROUND] Updated session index to {current_round_number}")
-
-            # Получаем следующий вопрос
             next_question_data = self.get_next_question(session_id)
             logger.info(f"[COMPLETE_ROUND] Got next question data")
         else:
