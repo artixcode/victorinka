@@ -6,7 +6,7 @@ import Footer from '../components/Footer';
 import styles from '../styles/GameRoom.module.css';
 
 const GameRoom = () => {
-  const { sessionId } = useParams();
+  useParams();
   const navigate = useNavigate();
 
   const [roomId, setRoomId] = useState('');
@@ -23,12 +23,15 @@ const GameRoom = () => {
   const [questionStartTime, setQuestionStartTime] = useState(null);
 
   const socketRef = useRef(null);
+  const reconnectAttempts = useRef(0);
+  const maxReconnectAttempts = 5;
+  const reconnectDelay = 3000; // 3 секунды
+  const [reconnectTrigger, setReconnectTrigger] = useState(0);
 
   useEffect(() => {
     const storedRoomId = localStorage.getItem('gameRoomId');
     const storedRoomName = localStorage.getItem('gameRoomName');
-    const storedSessionId = localStorage.getItem('gameSessionId');
-
+    // const storedSessionId = localStorage.getItem('gameSessionId');
     try {
       const userStr = localStorage.getItem('user');
       if (userStr) {
@@ -58,19 +61,11 @@ const GameRoom = () => {
       return;
     }
 
+    const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const wsUrl = `${wsScheme}://${window.location.host}/ws/room/${roomId}/?token=${token}`;
 
     try {
       const socket = new WebSocket(wsUrl);
-
-      socket.onopen = () => {
-        setIsConnected(true);
-        setChatMessages(prev => [...prev, {
-          username: 'Система',
-          message: 'Подключение к игре установлено',
-          timestamp: new Date().toISOString()
-        }]);
-      };
 
       socket.onmessage = (event) => {
         try {
@@ -261,6 +256,10 @@ const GameRoom = () => {
             case 'error':
               alert(`Ошибка: ${data.message}`);
               break;
+
+            default:
+              console.log('Неизвестный тип сообщения:', data.type);
+              break;
           }
 
         } catch (error) {
@@ -279,9 +278,41 @@ const GameRoom = () => {
 
       socket.onclose = (event) => {
         setIsConnected(false);
+
+        if (event.code !== 1000 && reconnectAttempts.current < maxReconnectAttempts) {
+          reconnectAttempts.current += 1;
+          setChatMessages(prev => [...prev, {
+            username: 'Система',
+            message: `Соединение разорвано. Попытка переподключения ${reconnectAttempts.current}/${maxReconnectAttempts}...`,
+            timestamp: new Date().toISOString()
+          }]);
+
+          setTimeout(() => {
+            if (roomId) {
+              setReconnectTrigger(prev => prev + 1);
+            }
+          }, reconnectDelay);
+        } else if (reconnectAttempts.current >= maxReconnectAttempts) {
+          setChatMessages(prev => [...prev, {
+            username: 'Система',
+            message: '❌ Не удалось переподключиться. Обновите страницу.',
+            timestamp: new Date().toISOString()
+          }]);
+        } else {
+          setChatMessages(prev => [...prev, {
+            username: 'Система',
+            message: 'Соединение закрыто',
+            timestamp: new Date().toISOString()
+          }]);
+        }
+      };
+
+      socket.onopen = () => {
+        reconnectAttempts.current = 0;
+        setIsConnected(true);
         setChatMessages(prev => [...prev, {
           username: 'Система',
-          message: 'Соединение разорвано',
+          message: 'Подключение к игре установлено',
           timestamp: new Date().toISOString()
         }]);
       };
@@ -297,7 +328,7 @@ const GameRoom = () => {
         socketRef.current.close();
       }
     };
-  }, [roomId, navigate, userId]);
+  }, [roomId, navigate, userId, reconnectTrigger]);
 
   const sendWebSocketMessage = (type, data = {}) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {

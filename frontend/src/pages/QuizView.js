@@ -25,6 +25,7 @@ const QuizView = () => {
       setError('ID викторины не указан');
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchQuiz = async () => {

@@ -10,7 +10,6 @@ const MyQuizzes = () => {
     const [quizzes, setQuizzes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [user, setUser] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [searchQuery, setSearchQuery] = useState('');
     const quizzesPerPage = 16;
@@ -18,7 +17,6 @@ const MyQuizzes = () => {
     useEffect(() => {
         const userData = localStorage.getItem('user');
         if (userData) {
-            setUser(JSON.parse(userData));
             fetchMyQuizzes();
         } else {
             navigate('/login');

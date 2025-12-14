@@ -45,6 +45,7 @@ const Leaderboard = () => {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, ordering, quizId]);
 
   const handleQuizSubmit = (e) => {
