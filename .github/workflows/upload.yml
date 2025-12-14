@@ -21,6 +21,7 @@ jobs:
             --omit-dir-times
             --exclude ".git/" --exclude ".github/"
             --exclude ".env"
+            --exclude "backend/src/staticfiles/"
             --exclude "frontend/node_modules/"
             --exclude "**/__pycache__/"
             --exclude "**/*.pyc"
