@@ -58,7 +58,7 @@ const GameRoom = () => {
       return;
     }
 
-    const wsUrl = `ws://localhost/ws/room/${roomId}/?token=${token}`;
+    const wsUrl = `${wsScheme}://${window.location.host}/ws/room/${roomId}/?token=${token}`;
 
     try {
       const socket = new WebSocket(wsUrl);
@@ -348,7 +348,7 @@ const GameRoom = () => {
       return;
     }
 
-    if (confirm('Начать игру?')) {
+    if (window.confirm('Начать игру?')) {
       sendWebSocketMessage('start_game');
     }
   };
