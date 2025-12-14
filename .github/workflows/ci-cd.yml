@@ -1,12 +1,74 @@
-name: Upload code and env to server
+name: CI / CD Pipeline
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - main
 
 jobs:
-  upload:
+  test-backend:
+    name: Backend tests
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U test_user"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    env:
+      DB_ENGINE: postgresql
+      POSTGRES_DB: test_db
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_pass
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+
+      DJANGO_SECRET_KEY: test-secret
+      DJANGO_DEBUG: "1"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Run Django tests
+        run: |
+          cd backend/src
+          python manage.py test
+
+  deploy:
+    name: Deploy to server
+    runs-on: ubuntu-latest
+    needs:
+      - test-backend
 
     steps:
       - name: Checkout repository
@@ -46,9 +108,8 @@ jobs:
             ${{ secrets.APP_ENV_FILE }}
             EOF
             chmod 600 /opt/victorinka/env/.env
-            echo "OK: /opt/victorinka/env/.env written"
 
-      - name: Verify upload
+      - name: Restart services
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -56,16 +117,6 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            set -e
-            echo "=== /opt/victorinka ==="
-            ls -la /opt/victorinka
-            echo "=== /opt/victorinka/app (top) ==="
-            ls -la /opt/victorinka/app | head -n 60
-            echo "=== env check ==="
-            test -f /opt/victorinka/env/.env && echo "OK: env exists"
-            echo "=== .env symlink check (if exists) ==="
-            if [ -e /opt/victorinka/app/.env ]; then
-              ls -la /opt/victorinka/app/.env
-            else
-              echo "NOTE: /opt/victorinka/app/.env does not exist (symlink not created yet or was removed)"
-            fi
+            cd /opt/victorinka/app
+            docker compose up -d --build
+            docker compose ps
