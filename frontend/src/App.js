@@ -28,6 +28,8 @@ function App() {
           <Route path="/rooms" element={<Rooms />} />
           <Route path="/room/:id" element={<RoomDetail />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/profile/history" element={<Profile />} />
+          <Route path="/profile/bookmarks" element={<Profile />} />
           <Route path="/create-quiz" element={<CreateQuiz />} />
           <Route path="/my-quizzes" element={<MyQuizzes />} />
           <Route path="/quiz/:id" element={<QuizView />} />

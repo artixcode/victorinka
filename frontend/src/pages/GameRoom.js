@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import styles from '../styles/GameRoom.module.css';
 
 const GameRoom = () => {
   const { sessionId } = useParams();
@@ -143,7 +144,6 @@ const GameRoom = () => {
 
             case 'game_started':
               setGameStatus('playing');
-              // Данные могут быть в data.data или напрямую в data
               const gameData = data.data || data;
               setChatMessages(prev => [...prev, {
                 username: 'Система',
@@ -153,7 +153,6 @@ const GameRoom = () => {
               break;
 
             case 'question_revealed':
-              // Данные могут быть в data.data или напрямую в data
               const questionData = data.data || data;
               setCurrentQuestion({
                 round_number: questionData.round_number,
@@ -362,25 +361,19 @@ const GameRoom = () => {
 
   if (!roomId) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div className={styles.pageContainer}>
         <Header />
-        <main style={{ flex: 1, padding: '20px', textAlign: 'center' }}>
-          <h2>Ошибка загрузки комнаты</h2>
-          <p>Пожалуйста, вернитесь в список комнат и присоединитесь к игре.</p>
-          <button
-            onClick={() => navigate('/rooms')}
-            style={{
-              padding: '10px 20px',
-              background: '#667eea',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: 'pointer',
-              marginTop: '20px'
-            }}
-          >
-            Вернуться к комнатам
-          </button>
+        <main className={styles.main}>
+          <div className={styles.errorContainer}>
+            <h2>Ошибка загрузки комнаты</h2>
+            <p>Пожалуйста, вернитесь в список комнат и присоединитесь к игре.</p>
+            <button
+              onClick={() => navigate('/rooms')}
+              className={styles.returnButton}
+            >
+              Вернуться к комнатам
+            </button>
+          </div>
         </main>
         <Footer />
       </div>
@@ -388,249 +381,118 @@ const GameRoom = () => {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-    }}>
+    <div className={styles.pageContainer}>
       <Header />
-      <main style={{
-        flex: 1,
-        padding: '20px',
-        maxWidth: '1400px',
-        margin: '0 auto',
-        width: '100%'
-      }}>
-        <div style={{
-          background: 'white',
-          borderRadius: '10px',
-          padding: '20px',
-          marginBottom: '20px',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.1)'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h1 style={{ margin: '0 0 10px 0', color: '#333' }}>{roomName}</h1>
-              <div style={{ display: 'flex', gap: '20px', color: '#666' }}>
-                <div><strong>ID комнаты:</strong> {roomId}</div>
-                <div><strong>Статус:</strong>
-                  <span style={{
-                    color: isConnected ? '#2e7d32' : '#c62828',
-                    fontWeight: 'bold',
-                    marginLeft: '10px'
-                  }}>
-                    {isConnected ? '✅ ПОДКЛЮЧЕНО' : '❌ ОТКЛЮЧЕНО'}
-                  </span>
-                </div>
-                <div><strong>Вы:</strong> {isHost ? '👑 Хост' : 'Игрок'}</div>
+      <main className={styles.main}>
+        <div className={styles.roomHeader}>
+          <div className={styles.headerContent}>
+            <h1>{roomName}</h1>
+            <div className={styles.roomInfo}>
+              <div><strong>ID комнаты:</strong> {roomId}</div>
+              <div><strong>Статус:</strong>
+                <span className={isConnected ? styles.statusConnected : styles.statusDisconnected}>
+                  {isConnected ? '✅ ПОДКЛЮЧЕНО' : '❌ ОТКЛЮЧЕНО'}
+                </span>
               </div>
+              <div><strong>Вы:</strong> {isHost ? '👑 Хост' : 'Игрок'}</div>
             </div>
-
-            <button
-              onClick={() => {
-                localStorage.removeItem('gameRoomId');
-                localStorage.removeItem('gameRoomName');
-                localStorage.removeItem('gameSessionId');
-                localStorage.removeItem('selectedQuizId');
-                navigate('/rooms');
-              }}
-              style={{
-                padding: '10px 20px',
-                background: '#6c757d',
-                color: 'white',
-                border: 'none',
-                borderRadius: '5px',
-                cursor: 'pointer'
-              }}
-            >
-              Выйти
-            </button>
           </div>
 
-          <div style={{
-            display: 'flex',
-            gap: '10px',
-            marginTop: '20px',
-            padding: '15px',
-            background: '#f8f9fa',
-            borderRadius: '5px'
-          }}>
-            <button
-              onClick={handleGetState}
-              disabled={!isConnected}
-              style={{
-                padding: '8px 16px',
-                background: isConnected ? '#2196f3' : '#b0bec5',
-                color: 'white',
-                border: 'none',
-                borderRadius: '5px',
-                cursor: isConnected ? 'pointer' : 'not-allowed'
-              }}
-            >
-              Обновить состояние
-            </button>
-
-            {isHost && gameStatus === 'waiting' && (
-              <button
-                onClick={handleStartGame}
-                disabled={!isConnected}
-                style={{
-                  padding: '8px 16px',
-                  background: isConnected ? '#4caf50' : '#b0bec5',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: isConnected ? 'pointer' : 'not-allowed'
-                }}
-              >
-                🎮 Начать игру
-              </button>
-            )}
-
-            {isHost && (gameStatus === 'playing' || gameStatus === 'paused') && (
-              <button
-                onClick={handlePauseGame}
-                disabled={!isConnected}
-                style={{
-                  padding: '8px 16px',
-                  background: isConnected ? '#ff9800' : '#b0bec5',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: isConnected ? 'pointer' : 'not-allowed'
-                }}
-              >
-                {gameStatus === 'playing' ? '⏸️ Пауза' : '▶️ Продолжить'}
-              </button>
-            )}
-          </div>
+          <button
+            onClick={() => {
+              localStorage.removeItem('gameRoomId');
+              localStorage.removeItem('gameRoomName');
+              localStorage.removeItem('gameSessionId');
+              localStorage.removeItem('selectedQuizId');
+              navigate('/rooms');
+            }}
+            className={styles.exitButton}
+          >
+            Выйти
+          </button>
         </div>
 
-        <div style={{ display: 'flex', gap: '20px' }}>
-          <div style={{
-            flex: 3,
-            background: 'white',
-            borderRadius: '10px',
-            padding: '20px',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.1)'
-          }}>
+        <div className={styles.controlsPanel}>
+          <button
+            onClick={handleGetState}
+            disabled={!isConnected}
+            className={`${styles.controlButton} ${!isConnected ? styles.disabled : ''}`}
+          >
+            Обновить состояние
+          </button>
+
+          {isHost && gameStatus === 'waiting' && (
+            <button
+              onClick={handleStartGame}
+              disabled={!isConnected}
+              className={`${styles.controlButton} ${styles.startButton} ${!isConnected ? styles.disabled : ''}`}
+            >
+              🎮 Начать игру
+            </button>
+          )}
+
+          {isHost && (gameStatus === 'playing' || gameStatus === 'paused') && (
+            <button
+              onClick={handlePauseGame}
+              disabled={!isConnected}
+              className={`${styles.controlButton} ${styles.pauseButton} ${!isConnected ? styles.disabled : ''}`}
+            >
+              {gameStatus === 'playing' ? '⏸️ Пауза' : '▶️ Продолжить'}
+            </button>
+          )}
+        </div>
+
+        <div className={styles.gameContent}>
+          <div className={styles.gameArea}>
             {(gameStatus === 'playing' || gameStatus === 'paused') && (
-              <div style={{
-                background: gameStatus === 'paused' ?
-                  'linear-gradient(135deg, #9e9e9e 0%, #616161 100%)' :
-                  timer.remaining <= 10 ?
-                  'linear-gradient(135deg, #f5576c 0%, #d32f2f 100%)' :
-                  'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                borderRadius: '10px',
-                padding: '20px',
-                color: 'white',
-                textAlign: 'center',
-                marginBottom: '20px'
-              }}>
-                <div style={{ fontSize: '48px', fontWeight: 'bold', marginBottom: '10px' }}>
+              <div className={`${styles.timer} ${gameStatus === 'paused' ? styles.timerPaused : timer.remaining <= 10 ? styles.timerCritical : styles.timerNormal}`}>
+                <div className={styles.timerValue}>
                   {gameStatus === 'paused' ? '⏸️' : '⏱️'} {timer.remaining} сек
                 </div>
-                <div style={{
-                  background: 'rgba(255,255,255,0.3)',
-                  height: '20px',
-                  borderRadius: '10px',
-                  overflow: 'hidden'
-                }}>
-                  <div style={{
-                    height: '100%',
-                    background: 'white',
-                    width: `${(timer.remaining / timer.total) * 100}%`,
-                    transition: 'width 1s linear'
-                  }} />
+                <div className={styles.timerBar}>
+                  <div
+                    className={styles.timerProgress}
+                    style={{ width: `${(timer.remaining / timer.total) * 100}%` }}
+                  />
                 </div>
-                <div style={{ marginTop: '10px', fontSize: '14px' }}>
+                <div className={styles.timerLabel}>
                   {gameStatus === 'paused' ? 'Игра на паузе' : `Раунд ${currentQuestion?.round_number || 1}`}
                 </div>
               </div>
             )}
 
             {currentQuestion ? (
-              <div>
-                <h2 style={{ color: '#333' }}>Вопрос #{currentQuestion.round_number}</h2>
-                <p style={{
-                  fontSize: '20px',
-                  margin: '20px 0',
-                  lineHeight: '1.5',
-                  padding: '15px',
-                  background: '#f8f9fa',
-                  borderRadius: '8px'
-                }}>
+              <div className={styles.questionSection}>
+                <h2>Вопрос #{currentQuestion.round_number}</h2>
+                <div className={styles.questionText}>
                   {currentQuestion.question_text}
-                </p>
+                </div>
 
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(2, 1fr)',
-                  gap: '15px',
-                  marginTop: '30px'
-                }}>
+                <div className={styles.optionsGrid}>
                   {currentQuestion.options?.map((option, index) => (
                     <button
                       key={option.id}
                       onClick={() => handleSubmitAnswer(option.id)}
                       disabled={answered}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '15px',
-                        border: `2px solid ${answered ? '#ddd' : '#667eea'}`,
-                        borderRadius: '8px',
-                        background: 'white',
-                        cursor: answered ? 'not-allowed' : 'pointer',
-                        textAlign: 'left',
-                        transition: 'all 0.2s',
-                        opacity: answered ? 0.7 : 1
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!answered) e.currentTarget.style.transform = 'translateY(-2px)';
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!answered) e.currentTarget.style.transform = 'translateY(0)';
-                      }}
+                      className={styles.optionButton}
                     >
-                      <div style={{
-                        width: '30px',
-                        height: '30px',
-                        background: '#667eea',
-                        color: 'white',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginRight: '15px',
-                        fontWeight: 'bold',
-                        flexShrink: 0
-                      }}>
+                      <div className={styles.optionIndex}>
                         {String.fromCharCode(65 + index)}
                       </div>
-                      <span style={{ flex: 1 }}>{option.text}</span>
+                      <div className={styles.optionText}>{option.text}</div>
                     </button>
                   ))}
                 </div>
 
                 {answered && (
-                  <div style={{
-                    marginTop: '20px',
-                    padding: '15px',
-                    background: '#e8f5e9',
-                    borderRadius: '8px',
-                    textAlign: 'center',
-                    color: '#2e7d32',
-                    fontWeight: 'bold'
-                  }}>
+                  <div className={styles.answerSubmitted}>
                     ✅ Ответ отправлен!
                   </div>
                 )}
               </div>
             ) : (
-              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                <h2 style={{ color: '#666' }}>
+              <div className={styles.waitingSection}>
+                <h2>
                   {gameStatus === 'waiting' ? 'Ожидание начала игры...' :
                    gameStatus === 'finished' ? '🏆 Игра завершена!' :
                    'Между раундами...'}
@@ -642,36 +504,20 @@ const GameRoom = () => {
                   <p>Ведущий скоро начнет игру...</p>
                 )}
                 {gameStatus === 'finished' && (
-                  <div style={{ marginTop: '20px' }}>
-                    <p style={{ marginBottom: '20px', color: '#666' }}>
+                  <div className={styles.finishedActions}>
+                    <p>
                       Спасибо за участие! Посмотрите результаты в лидерборде.
                     </p>
-                    <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <div className={styles.actionButtons}>
                       <button
                         onClick={() => navigate(`/room/${roomId}`)}
-                        style={{
-                          padding: '12px 24px',
-                          background: '#667eea',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          fontSize: '16px'
-                        }}
+                        className={styles.actionButton}
                       >
                         🚪 Вернуться к комнате
                       </button>
                       <button
                         onClick={() => navigate('/leaderboard')}
-                        style={{
-                          padding: '12px 24px',
-                          background: '#4caf50',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          fontSize: '16px'
-                        }}
+                        className={styles.actionButton}
                       >
                         🏆 Лидерборд
                       </button>
@@ -682,56 +528,22 @@ const GameRoom = () => {
             )}
           </div>
 
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={{
-              background: 'white',
-              borderRadius: '10px',
-              padding: '20px',
-              boxShadow: '0 10px 40px rgba(0,0,0,0.1)'
-            }}>
-              <h3 style={{ margin: '0 0 15px 0', color: '#333' }}>
-                👥 Игроки ({players.length})
-              </h3>
-              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+          <div className={styles.sidebar}>
+            <div className={styles.playersPanel}>
+              <h3>👥 Игроки ({players.length})</h3>
+              <div className={styles.playersList}>
                 {players.map(player => (
                   <div
                     key={player.user_id}
-                    style={{
-                      padding: '10px',
-                      marginBottom: '8px',
-                      background: player.user_id === userId ? '#e3f2fd' : '#f8f9fa',
-                      borderRadius: '8px',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      borderLeft: `4px solid ${player.is_host ? '#ffd700' : '#4caf50'}`
-                    }}
+                    className={`${styles.playerItem} ${player.user_id === userId ? styles.currentPlayer : ''}`}
                   >
-                    <span style={{ fontWeight: player.user_id === userId ? 'bold' : 'normal' }}>
-                      {player.username}
-                    </span>
-                    <div style={{ display: 'flex', gap: '5px' }}>
+                    <span>{player.username}</span>
+                    <div className={styles.playerTags}>
                       {player.user_id === userId && (
-                        <span style={{
-                          background: '#4caf50',
-                          color: 'white',
-                          padding: '2px 8px',
-                          borderRadius: '10px',
-                          fontSize: '12px'
-                        }}>
-                          Вы
-                        </span>
+                        <span className={styles.youTag}>Вы</span>
                       )}
                       {player.is_host && (
-                        <span style={{
-                          background: '#ffd700',
-                          color: '#333',
-                          padding: '2px 8px',
-                          borderRadius: '10px',
-                          fontSize: '12px'
-                        }}>
-                          👑 Хост
-                        </span>
+                        <span className={styles.hostTag}>👑 Хост</span>
                       )}
                     </div>
                   </div>
@@ -739,60 +551,28 @@ const GameRoom = () => {
               </div>
             </div>
 
-            <div style={{
-              background: 'white',
-              borderRadius: '10px',
-              padding: '20px',
-              boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-              display: 'flex',
-              flexDirection: 'column',
-              height: '400px'
-            }}>
-              <h3 style={{ margin: '0 0 15px 0', color: '#333' }}>💬 Чат</h3>
-
-              <div style={{
-                flex: 1,
-                overflowY: 'auto',
-                marginBottom: '15px',
-                padding: '10px',
-                background: '#f9f9f9',
-                borderRadius: '5px'
-              }}>
+            <div className={styles.chatPanel}>
+              <h3>💬 Чат</h3>
+              <div className={styles.chatMessages}>
                 {chatMessages.map((msg, index) => (
                   <div
                     key={index}
-                    style={{
-                      marginBottom: '10px',
-                      padding: '8px',
-                      background: msg.user_id === userId ? '#e8f5e9' : 'white',
-                      borderRadius: '5px',
-                      borderLeft: `3px solid ${msg.username === 'Система' ? '#9c27b0' : '#667eea'}`
-                    }}
+                    className={`${styles.chatMessage} ${msg.user_id === userId ? styles.ownMessage : ''}`}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <strong style={{ color: msg.username === 'Система' ? '#9c27b0' : '#333' }}>
-                        {msg.username}
-                      </strong>
-                      <small style={{ color: '#666' }}>
+                    <div className={styles.chatHeader}>
+                      <strong>{msg.username}</strong>
+                      <small>
                         {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}
                       </small>
                     </div>
-                    <div style={{ marginTop: '5px' }}>{msg.message}</div>
+                    <div>{msg.message}</div>
                   </div>
                 ))}
               </div>
-
-              <div style={{ display: 'flex' }}>
+              <div className={styles.chatInput}>
                 <input
                   type="text"
                   placeholder="Введите сообщение..."
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    border: '1px solid #ddd',
-                    borderRadius: '5px 0 0 5px',
-                    fontSize: '14px'
-                  }}
                   onKeyPress={(e) => {
                     if (e.key === 'Enter' && e.target.value.trim()) {
                       handleSendChatMessage(e.target.value.trim());
@@ -802,19 +582,11 @@ const GameRoom = () => {
                 />
                 <button
                   onClick={() => {
-                    const input = document.querySelector('input[type="text"]');
+                    const input = document.querySelector(`.${styles.chatInput} input`);
                     if (input.value.trim()) {
                       handleSendChatMessage(input.value.trim());
                       input.value = '';
                     }
-                  }}
-                  style={{
-                    padding: '10px 20px',
-                    background: '#667eea',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '0 5px 5px 0',
-                    cursor: 'pointer'
                   }}
                 >
                   Отправить
