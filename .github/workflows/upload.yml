@@ -15,7 +15,15 @@ jobs:
       - name: Upload repo to server via rsync
         uses: burnett01/rsync-deployments@7.0.2
         with:
-          switches: -avzr --delete --exclude ".git/" --exclude ".github/"
+          switches: >-
+            -azr --delete
+            --no-perms --no-owner --no-group
+            --omit-dir-times
+            --exclude ".git/" --exclude ".github/"
+            --exclude ".env"
+            --exclude "frontend/node_modules/"
+            --exclude "**/__pycache__/"
+            --exclude "**/*.pyc"
           path: ./
           remote_path: ${{ secrets.APP_PATH }}
           remote_host: ${{ secrets.SSH_HOST }}
@@ -37,9 +45,9 @@ jobs:
             ${{ secrets.APP_ENV_FILE }}
             EOF
             chmod 600 /opt/victorinka/env/.env
-            echo "OK: .env file written"
+            echo "OK: /opt/victorinka/env/.env written"
 
-      - name: Verify files on server
+      - name: Verify upload
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -50,8 +58,13 @@ jobs:
             set -e
             echo "=== /opt/victorinka ==="
             ls -la /opt/victorinka
-            echo "=== /opt/victorinka/app ==="
-            ls -la /opt/victorinka/app | head -n 50
+            echo "=== /opt/victorinka/app (top) ==="
+            ls -la /opt/victorinka/app | head -n 60
             echo "=== env check ==="
             test -f /opt/victorinka/env/.env && echo "OK: env exists"
-            echo "Upload completed successfully"
+            echo "=== .env symlink check (if exists) ==="
+            if [ -e /opt/victorinka/app/.env ]; then
+              ls -la /opt/victorinka/app/.env
+            else
+              echo "NOTE: /opt/victorinka/app/.env does not exist (symlink not created yet or was removed)"
+            fi
