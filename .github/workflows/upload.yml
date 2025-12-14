@@ -1,0 +1,40 @@
+name: Upload code to server
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload repo to server via rsync
+        uses: burnett01/rsync-deployments@7.0.2
+        with:
+          switches: -avzr --delete --exclude ".git/" --exclude ".github/"
+          path: ./
+          remote_path: ${{ secrets.APP_PATH }}
+          remote_host: ${{ secrets.SSH_HOST }}
+          remote_user: ${{ secrets.SSH_USER }}
+          remote_port: ${{ secrets.SSH_PORT }}
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Verify upload
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            echo "Listing /opt/victorinka/app"
+            ls -la /opt/victorinka/app | head -n 60
+            echo "Checking key files"
+            test -f /opt/victorinka/app/docker-compose.yml && echo "OK: docker-compose.yml"
+            test -d /opt/victorinka/app/backend && echo "OK: backend/"
+            test -d /opt/victorinka/app/frontend && echo "OK: frontend/"
