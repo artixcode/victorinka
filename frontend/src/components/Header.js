@@ -9,7 +9,6 @@ const Header = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Проверяем, авторизован ли пользователь
     const userData = localStorage.getItem('user');
     if (userData) {
       setUser(JSON.parse(userData));
@@ -17,7 +16,6 @@ const Header = () => {
   }, []);
 
   useEffect(() => {
-    // Закрываем dropdown при клике вне его
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowDropdown(false);
@@ -49,7 +47,7 @@ const Header = () => {
       <nav className={styles.nav}>
         <Link to="/" className={styles.navLink}>Главная</Link>
         <Link to="/quizzes" className={styles.navLink}>Викторины</Link>
-        <Link to="/create-room" className={styles.navLink}>Создать комнату</Link>
+        <Link to="/rooms" className={styles.navLink}>Комнаты</Link>
         <Link to="/leaderboard" className={styles.navLink}>Лидеры</Link>
 
         {user ? (

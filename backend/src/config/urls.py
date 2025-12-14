@@ -14,7 +14,7 @@ from apps.users.views import (
 from apps.users.leaderboard_views import (
     GlobalLeaderboardView, QuizLeaderboardView, RoomLeaderboardView, UserStatsDetailView
 )
-from apps.rooms.views import MyRoomsListView, RoomCreateView, RoomDetailView, RoomJoinView, RoomLeaveView
+from apps.rooms.views import MyRoomsListView, RoomCreateView, RoomDetailView, RoomJoinView, RoomLeaveView, RoomFindView
 from apps.questions.views import (
     MyQuestionsListCreateView,
     MyQuestionDetailView,
@@ -65,6 +65,7 @@ urlpatterns = [
     # Rooms
     path("api/rooms/mine/", MyRoomsListView.as_view()),
     path("api/rooms/", RoomCreateView.as_view()),
+    path("api/rooms/find/", RoomFindView.as_view()),
     path("api/rooms/<int:pk>/", RoomDetailView.as_view()),
     path("api/rooms/<int:pk>/join/", RoomJoinView.as_view()),
     path("api/rooms/<int:pk>/leave/", RoomLeaveView.as_view()),

@@ -5,7 +5,7 @@ from model_bakery import baker
 
 from apps.rooms.models import Room, RoomParticipant
 from apps.game.models import GameSession, GameRound, PlayerGameStats
-from test_session_controls import create_quiz_with_one_question
+from apps.game.tests.test_session_controls import create_quiz_with_one_question
 
 @pytest.mark.django_db
 def test_get_current_question_success(auth_client, user):

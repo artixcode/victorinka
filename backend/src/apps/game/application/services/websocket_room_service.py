@@ -2,7 +2,8 @@ from typing import Optional, Dict, List
 import re
 from apps.game.domain.services.room_session_service import RoomSessionService
 from apps.game.infrastructure.redis_room_repository import room_state_repository
-
+from apps.game.models import GameSession
+from apps.rooms.models import Room
 
 class WebSocketRoomService:
 
@@ -62,6 +63,9 @@ class WebSocketRoomService:
         # Обновляем TTL комнаты при активности
         self.repository.refresh_room_ttl(room_id)
 
+        metadata = self.repository.get_room_metadata(room_id)
+        is_host = metadata.get('host_id') == user_id if metadata else False
+
         # Вызываем domain service
         event = self.room_session_service.join_room(
             room_id=room_id,
@@ -77,6 +81,7 @@ class WebSocketRoomService:
             'event': 'player_joined',
             'user_id': event.user_id,
             'username': event.username,
+            'is_host': is_host,
             'timestamp': event.timestamp.isoformat(),
             'room_info': room_info
         }
@@ -153,7 +158,7 @@ class WebSocketRoomService:
 
     def get_room_state(self, room_id: int) -> Dict:
         """
-        Получить полное состояние комнаты включая метаданные.
+        Получить полное состояние комнаты включая метаданные и текущую игру.
         """
         # Базовая информация
         room_info = self.room_session_service.get_room_info(room_id)
@@ -173,6 +178,40 @@ class WebSocketRoomService:
         # Добавляем последние сообщения
         recent_messages = self.repository.get_recent_messages(room_id, limit=20)
         room_info['recent_messages'] = recent_messages
+
+
+        try:
+            room = Room.objects.get(id=room_id)
+            active_session = room.game_sessions.filter(
+                status__in=[GameSession.Status.PLAYING, GameSession.Status.WAITING]
+            ).order_by('-created_at').first()
+
+            if active_session:
+                room_info['game_session'] = {
+                    'id': active_session.id,
+                    'status': active_session.status,
+                    'quiz_title': active_session.quiz.title,
+                    'total_questions': active_session.quiz.questions.count()
+                }
+
+                # Если игра идет - получаем текущий вопрос из Redis
+                if active_session.status == GameSession.Status.PLAYING:
+                    from apps.game.infrastructure.redis_game_state_repository import game_state_repository
+                    game_state = game_state_repository.get_game_state(active_session.id)
+                    current_round = game_state_repository.get_current_round(active_session.id)
+
+                    if current_round:
+                        room_info['current_question'] = {
+                            'round_number': current_round.get('round_number'),
+                            'question_id': current_round.get('question_id'),
+                            'question_text': current_round.get('question_text'),
+                            'options': current_round.get('options', []),
+                            'time_limit': current_round.get('time_limit', 30),
+                            'points': current_round.get('points', 0),
+                            'difficulty': current_round.get('difficulty', 'medium')
+                        }
+        except Room.DoesNotExist:
+            pass
 
         return room_info
 
