@@ -1,4 +1,4 @@
-name: Upload code to server
+name: Upload code and env to server
 
 on:
   push:
@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Upload repo to server via rsync
@@ -23,7 +23,7 @@ jobs:
           remote_port: ${{ secrets.SSH_PORT }}
           remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Verify upload
+      - name: Write .env on server
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -32,9 +32,26 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
-            echo "Listing /opt/victorinka/app"
-            ls -la /opt/victorinka/app | head -n 60
-            echo "Checking key files"
-            test -f /opt/victorinka/app/docker-compose.yml && echo "OK: docker-compose.yml"
-            test -d /opt/victorinka/app/backend && echo "OK: backend/"
-            test -d /opt/victorinka/app/frontend && echo "OK: frontend/"
+            mkdir -p /opt/victorinka/env
+            cat > /opt/victorinka/env/.env << 'EOF'
+            ${{ secrets.APP_ENV_FILE }}
+            EOF
+            chmod 600 /opt/victorinka/env/.env
+            echo "OK: .env file written"
+
+      - name: Verify files on server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            echo "=== /opt/victorinka ==="
+            ls -la /opt/victorinka
+            echo "=== /opt/victorinka/app ==="
+            ls -la /opt/victorinka/app | head -n 50
+            echo "=== env check ==="
+            test -f /opt/victorinka/env/.env && echo "OK: env exists"
+            echo "Upload completed successfully"
