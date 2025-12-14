@@ -1,0 +1,119 @@
+/* ProfileSidebar.module.css */
+.sidebar {
+  width: 280px;
+  background: linear-gradient(135deg, #4B0082 0%, #6a11cb 100%);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.sidebarHeader {
+  padding: 2rem 1.5rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebarTitle {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: white;
+}
+
+.sidebarNav {
+  flex: 1;
+  padding: 1.5rem 0;
+}
+
+.navItem {
+  width: 100%;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  padding: 1rem 1.5rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 1rem;
+  border-left: 4px solid transparent;
+  font-family: inherit;
+}
+
+.navItem:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-left-color: rgba(255, 255, 255, 0.3);
+}
+
+.navItemActive {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border-left-color: white;
+  font-weight: 600;
+}
+
+.navIcon {
+  font-size: 1.2rem;
+  width: 24px;
+  text-align: center;
+}
+
+.navLabel {
+  flex: 1;
+}
+
+.sidebarFooter {
+  padding: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.userInfo {
+  text-align: center;
+}
+
+.userWelcome {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+  }
+
+  .sidebarHeader {
+    padding: 1.5rem 1rem 1rem;
+  }
+
+  .sidebarTitle {
+    font-size: 1.3rem;
+  }
+
+  .sidebarNav {
+    padding: 1rem 0;
+    display: flex;
+  }
+
+  .navItem {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    border-left: none;
+    border-bottom: 3px solid transparent;
+    justify-content: center;
+    flex: 1;
+  }
+
+  .navItemActive {
+    border-left: none;
+    border-bottom-color: white;
+  }
+
+  .sidebarFooter {
+    padding: 1rem;
+  }
+}
